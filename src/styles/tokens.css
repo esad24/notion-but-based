@@ -1,0 +1,29 @@
+/* Color tokens (light on bare :root, dark twice: system preference and explicit data-theme) and option color classes .c-<name> */
+:root{
+  --bg:#fbfbfa; --surface:#ffffff; --surface-2:#f4f4f2; --hover:rgba(55,53,47,.065); --line:#e8e7e3;
+  --fg:#2b2a26; --muted:#7d7b74; --faint:#a9a79f; --accent:#2383e2; --accent-fg:#ffffff; --danger:#d1453f;
+  --shadow:0 10px 32px rgba(15,15,15,.14),0 0 0 1px rgba(15,15,15,.06); --scrim:rgba(15,15,15,.3);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Geist",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --gray-bg:#ebebe9; --gray-fg:#4b4a46; --brown-bg:#efe2d8; --brown-fg:#6b4a33; --orange-bg:#fbe3cd; --orange-fg:#8a4512;
+  --yellow-bg:#f8edc2; --yellow-fg:#755a08; --green-bg:#dbeee0; --green-fg:#25663a; --blue-bg:#d8e7f8; --blue-fg:#1d538f;
+  --purple-bg:#e7dff6; --purple-fg:#5a3a94; --pink-bg:#f7dbe8; --pink-fg:#8c2c5b; --red-bg:#f9dcdb; --red-fg:#972d2d;
+  --teal-bg:#d3efec; --teal-fg:#1f625c; --cyan-bg:#d4eef6; --cyan-fg:#19607a; --indigo-bg:#dfe1f8; --indigo-fg:#3b3f95; --lime-bg:#e6f2cf; --lime-fg:#4b6214; --fuchsia-bg:#f5dcf5; --fuchsia-fg:#85298a; --slate-bg:#e1e5ea; --slate-fg:#3d4652;
+  --grouped:#f2f2f7; --cell:#ffffff; --sep:rgba(60,60,67,.2); --seg-bg:rgba(118,118,128,.12); --seg-bg-strong:rgba(120,120,128,.2); --green-sw:#34c759;
+  --kb:0px; --safe-b:0px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+/* @include styles/tokens-dark.css */
+}}
+:root[data-theme="dark"]{
+/* @include styles/tokens-dark.css */
+}
+.c-gray{--tbg:var(--gray-bg);--tfg:var(--gray-fg)} .c-brown{--tbg:var(--brown-bg);--tfg:var(--brown-fg)}
+.c-orange{--tbg:var(--orange-bg);--tfg:var(--orange-fg)} .c-yellow{--tbg:var(--yellow-bg);--tfg:var(--yellow-fg)}
+.c-green{--tbg:var(--green-bg);--tfg:var(--green-fg)} .c-blue{--tbg:var(--blue-bg);--tfg:var(--blue-fg)}
+.c-purple{--tbg:var(--purple-bg);--tfg:var(--purple-fg)} .c-pink{--tbg:var(--pink-bg);--tfg:var(--pink-fg)}
+.c-red{--tbg:var(--red-bg);--tfg:var(--red-fg)}
+.c-teal{--tbg:var(--teal-bg);--tfg:var(--teal-fg)} .c-cyan{--tbg:var(--cyan-bg);--tfg:var(--cyan-fg)} .c-indigo{--tbg:var(--indigo-bg);--tfg:var(--indigo-fg)} .c-lime{--tbg:var(--lime-bg);--tfg:var(--lime-fg)} .c-fuchsia{--tbg:var(--fuchsia-bg);--tfg:var(--fuchsia-fg)} .c-slate{--tbg:var(--slate-bg);--tfg:var(--slate-fg)} .c-none{--tbg:var(--surface-2);--tfg:var(--muted)}
+@media (max-width:640px){
+  :root{--safe-b:max(env(safe-area-inset-bottom,0px),20px)}
+}

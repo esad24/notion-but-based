@@ -1,0 +1,7 @@
+/* Toast with optional Undo */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;z-index:70;background:var(--fg);color:var(--bg);border-radius:12px;padding:10px 10px 10px 16px;display:flex;align-items:center;gap:12px;font-size:14px;transition:transform .2s,opacity .2s;pointer-events:none;max-width:calc(100vw - 32px)}
+.toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.toast button{color:var(--bg);font-weight:600;padding:6px 10px;border-radius:8px;background:color-mix(in srgb,var(--bg) 16%,transparent)}
+@media (max-width:640px){
+  .toast{bottom:calc(76px + var(--safe-b))}
+}

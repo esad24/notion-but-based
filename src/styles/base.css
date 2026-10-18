@@ -1,0 +1,68 @@
+/* Reset, app shell, header (title row, search, view tabs, filter chips), #view scroller, bottom bar */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.4;overflow:hidden;-webkit-font-smoothing:antialiased;touch-action:manipulation;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+.ph{color:var(--faint)}
+.spacer{flex:1}
+
+#app{height:100%;display:flex;flex-direction:column}
+.top{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 0;border-bottom:1px solid var(--line);flex:none;background:var(--bg)}
+.title-row{display:flex;align-items:center;gap:8px;min-height:44px}
+.title-row h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sync{display:flex;align-items:center;gap:6px;color:var(--faint);font-size:12px;white-space:nowrap;flex:none}
+.sync::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green-fg)}
+.sync[data-s="saving"]::before{background:var(--yellow-fg)}
+.sync[data-s="local"]::before{background:var(--faint)}
+.sync[data-s="error"]::before{background:var(--danger)}
+.tools{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto}
+.ibtn{display:grid;place-items:center;width:36px;height:36px;border-radius:9px;color:var(--muted);position:relative;flex:none}
+.ibtn:hover{background:var(--hover);color:var(--fg)}
+.ibtn.on{color:var(--accent)}
+.ibtn.on::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.newbtn{display:flex;align-items:center;gap:4px;height:32px;padding:0 12px 0 10px;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-weight:500;white-space:nowrap;margin-left:6px}
+.searchbar{display:flex;align-items:center;gap:12px;padding-block:6px 4px}
+.sfield{flex:1;display:flex;align-items:center;gap:6px;height:36px;padding:0 10px;border-radius:10px;background:var(--seg-bg);color:var(--muted);min-width:0}
+.sfield input{border:0;background:none;outline:none;flex:1;min-width:0;height:100%;color:var(--fg)}
+.sfield input::placeholder{color:var(--muted)}
+.sfield input::-webkit-search-cancel-button{-webkit-appearance:none}
+.scancel{color:var(--accent);font-weight:500;height:36px}
+.vbar{display:flex;align-items:center;min-width:0;padding-block:8px 12px}
+.vtabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1;overscroll-behavior-x:contain}
+.vtabs::-webkit-scrollbar{display:none}
+.vtab{display:flex;align-items:center;gap:6px;height:34px;padding:0 14px;border-radius:17px;background:var(--seg-bg);color:var(--fg);font-weight:500;white-space:nowrap;flex:none;font-size:14px}
+.vtab svg{opacity:.7}
+.vtab[aria-current="true"]{background:var(--fg);color:var(--bg)}
+.vtab[aria-current="true"] svg{opacity:1}
+.vtab.plus{padding:0;width:34px;justify-content:center;color:var(--muted)}
+.chipbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:12px;margin-top:-2px}
+.chipbar::-webkit-scrollbar{display:none}
+.chipbar:empty{display:none}
+.fchip{display:flex;align-items:center;gap:5px;height:28px;padding:0 12px;border-radius:14px;color:var(--accent);font-size:13px;font-weight:500;white-space:nowrap;flex:none;background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.fchip svg{width:13px;height:13px}
+
+#view{flex:1;overflow-x:hidden;overflow-y:auto;min-height:0;position:relative;overscroll-behavior:none}
+#view.v-table{overflow:hidden}
+/* vertical and horizontal scrolling live on separate nested scrollers, so every swipe moves along one axis only */
+.hx{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}
+.bbar{display:none}
+@media (max-width:640px){
+  body{font-size:15px}
+  .top{padding-top:10px}
+  .title-row h1{font-size:30px}
+  .sync{font-size:0;gap:0}
+  .newbtn{display:none}
+  .ibtn{width:40px;height:40px}
+  .sfield{height:38px}
+  .sfield input,.scancel{font-size:17px}
+  .vtab{height:36px;font-size:15px;padding:0 15px;border-radius:18px}
+  .vtab.plus{width:36px}
+  .bbar{display:flex;align-items:center;justify-content:space-between;flex:none;padding-top:6px;padding-bottom:calc(6px + var(--safe-b));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-top:.5px solid var(--sep);background:var(--bg)}
+  .bnew{display:flex;align-items:center;gap:8px;color:var(--accent);font-weight:600;font-size:17px;height:44px}
+  .bnew svg{width:24px;height:24px}
+  .bcount{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+}

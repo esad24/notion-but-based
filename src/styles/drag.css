@@ -1,0 +1,6 @@
+/* Drag and drop: drop targets, ghost clone, insertion lines */
+.drop-line{height:2px;border-radius:2px;background:var(--accent);margin:-4px 2px;pointer-events:none}
+.over{outline:2px solid color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:-2px}
+.dragging{opacity:.35}
+.ghost{position:fixed;z-index:60;pointer-events:none;transform:rotate(2deg) scale(1.02);box-shadow:var(--shadow);opacity:.97;margin:0;will-change:left,top}
+body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none!important;-webkit-user-select:none!important}
