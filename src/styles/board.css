@@ -7,7 +7,7 @@
 .col-h .count{color:var(--muted);font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
 .col-h .ibtn{width:28px;height:28px}
 .col-body{display:flex;flex-direction:column;gap:6px;min-height:8px}
-.card{position:relative;border-radius:8px;padding:9px 10px 10px;background:color-mix(in srgb,var(--tbg) 52%,var(--surface));box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 7%,transparent);cursor:pointer;display:flex;gap:8px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;contain:layout paint}
+.card{position:relative;border-radius:8px;padding:9px 10px 10px;background:color-mix(in srgb,var(--tbg) 52%,var(--surface));box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 7%,transparent);cursor:pointer;display:flex;gap:8px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;content-visibility:auto;contain-intrinsic-size:auto 272px auto 92px}
 .card.c-none{background:var(--surface)}
 .card .chk{margin-top:1px}
 .card-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}

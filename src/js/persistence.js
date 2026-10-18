@@ -21,12 +21,22 @@ function refreshSync(){
   if (!db) return setSync('local', 'Saved on this device');
   if (busy.size || timers.size || Object.values(metaTimers).some(Boolean)) setSync('saving', 'Saving…'); else setSync('ok', 'Synced');
 }
+// at most 4 writes in flight, so a bulk change (sample pages, a type change) stays under the platform's rate budget
+let inflight = 0; const waiting = [];
+const slot = () => inflight < 4 ? (inflight++, Promise.resolve()) : new Promise(r => waiting.push(r));
+const release = () => { const w = waiting.shift(); if (w) w(); else inflight--; };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function retrying(fn, n = 0){
+  try { return await fn(); }
+  catch (e) {
+    const code = e && e.code;
+    if (n < 4 && (code === 'unavailable' || code === 'resource_exhausted')) { await wait((600 + Math.random() * 800) * 2 ** n); return retrying(fn, n + 1); }
+    throw e;
+  }
+}
 function queueWrite(key, fn){
   busy.set(key, (busy.get(key) || 0) + 1); refreshSync();
-  const run = () => fn().catch(e => {
-    if (e && e.code === 'unavailable') return new Promise(r => setTimeout(r, 600 + Math.random() * 800)).then(fn);
-    throw e;
-  });
+  const run = () => slot().then(() => retrying(fn)).finally(release);
   const p = (chains.get(key) || Promise.resolve()).then(run).catch(e => {
     console.error('save failed', e);
     setSync('error', 'Not saved');

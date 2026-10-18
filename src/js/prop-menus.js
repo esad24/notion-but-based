@@ -9,7 +9,7 @@ function propPage(pid, ctx = {}){
       + (p.type === 'number' ? selCell('fmt', 'Format', FORMATS, p.fmt || '') : ''));
     if (HAS_OPTS(p.type)) {
       html += `<div class="grp-h">Options</div><div class="grp"><div id="pp-opts">${(p.options || []).map(o => `<div class="cell opt" data-key="${o.id}" role="button"><span class="hdl">${IC.grip}</span><span class="cl"><span class="tag${p.type === 'status' ? ' st' : ''} c-${o.color}">${h(o.name)}</span></span>${p.type === 'status' ? `<span class="cv">${(GROUPS.find(g => g[0] === (o.group || 'todo')) || [])[1]}</span>` : ''}${chev}</div>`).join('')}</div>${fldCell('pp-new', newOpt, 'Add an option')}</div>
-        <div class="grp-f">Drag the grip to reorder. Tap an option to rename it or change its color.</div>`;
+        <div class="grp-f">Hold an option and slide to reorder; pickers, boards and sorting follow this order. Tap an option to rename it or change its color.</div>`;
     }
     if (ctx.inView) {
       html += grp(actCell('data-a="asc"', 'Sort ascending', IC.up) + actCell('data-a="desc"', 'Sort descending', IC.down) + actCell('data-a="filter"', 'Filter by this', IC.filter)

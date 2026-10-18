@@ -16,7 +16,14 @@
 .tfoot{color:var(--faint);font-size:12px;padding-block:8px;padding-left:max(24px,calc(env(safe-area-inset-left,0px) + 8px));font-variant-numeric:tabular-nums}
 .tfoot b{color:var(--muted);font-weight:500}
 .tbx{height:100%}
-.tbl{display:flex;flex-direction:column;height:100%;width:max-content;min-width:100%;font-size:14px}
+.tbl{display:flex;flex-direction:column;height:100%;width:max-content;min-width:100%;font-size:14px;position:relative}
+.th-line{position:absolute;top:0;bottom:0;width:3px;border-radius:2px;background:var(--accent);z-index:4;pointer-events:none}
+.tbody > .drop-line{margin:-1px 0}
+.tbody.over{outline:0}
+.th.dragging,.tr.dragging{opacity:.35}
+.th,.tr{-webkit-touch-callout:none}
+.ghost.th{background:var(--surface);border-radius:8px;border:0}
+.ghost.tr{background:var(--surface);border-radius:8px;overflow:hidden}
 .tb-in{width:max-content;min-width:100%;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .tb-hw{flex:none;border-bottom:1px solid var(--line);background:var(--bg)}
 .tb-h{display:flex}

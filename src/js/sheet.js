@@ -26,7 +26,8 @@ function renderSheet(){
   if (!t) { closeSheet(); return; }
   const ti = $('#f-title'); setInput(ti, t.title); autosize(ti);
   setInput($('#f-body'), t.body);
-  const html = S.schema.props.filter(p => p.type !== 'title').map(p => {
+  // same order as the current view's columns
+  const html = viewProps(V()).filter(p => p.type !== 'title').map(p => {
     const ro = p.type === 'created_time' || p.type === 'last_edited_time';
     const d = disp(p, t);
     return `<div class="pp"><button class="pn" data-act="propmenu" data-prop="${p.id}">${TI[p.type] || ''}<span>${h(p.name)}</span></button>
@@ -34,7 +35,7 @@ function renderSheet(){
   }).join('');
   const pp = $('#pprops'); if (pp.innerHTML !== html) pp.innerHTML = html;
 }
-$('#f-title').addEventListener('input', e => { autosize(e.target); update(S.openId, {title:e.target.value}, 400); });
+$('#f-title').addEventListener('input', e => { autosize(e.target); update(S.openId, {title:e.target.value}, 400, true); });
 $('#f-title').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('#f-body').focus(); } });
-$('#f-body').addEventListener('input', e => update(S.openId, {body:e.target.value}, 600));
+$('#f-body').addEventListener('input', e => update(S.openId, {body:e.target.value}, 600, true));
 $('#scrim').addEventListener('click', closeSheet);

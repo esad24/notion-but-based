@@ -38,6 +38,15 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
     const step = () => { i++; fire('touchmove', x0+dx*i/steps, y0+dy*i/steps); if (i<steps) requestAnimationFrame(step); else { fire('touchend', x0+dx, y0+dy); setTimeout(res, 350); } };
     requestAnimationFrame(step);
   }), [sel,dx,dy,steps]);
+  // real touch input through CDP (fires pointer + touch events, unlike synthetic TouchEvents): hold, then slide
+  const cdp = await ctx.newCDPSession(p);
+  const touchDrag = async (x0, y0, x1, y1, hold = 450, steps = 12) => {
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchStart', touchPoints:[{x:x0, y:y0}]});
+    await p.waitForTimeout(hold);
+    for (let i = 1; i <= steps; i++) { await cdp.send('Input.dispatchTouchEvent', {type:'touchMove', touchPoints:[{x:x0 + (x1 - x0) * i / steps, y:y0 + (y1 - y0) * i / steps}]}); await p.waitForTimeout(20); }
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchEnd', touchPoints:[]}); await p.waitForTimeout(350);
+  };
+  const center = async sel => { const b = await p.locator(sel).first().boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
   console.log('phone 402x874');
   await shot('board');
   check('bottom bar visible', await p.isVisible('#bbar'));
@@ -51,10 +60,33 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
   check('table header and rows in one horizontal scroller', tb.sameScroller && tb.viewOverflow === 'hidden' && tb.vyX === 'hidden' && tb.vyY === 'auto', JSON.stringify(tb));
   check('table header and rows scroll together', Math.abs(tb.headLeft - tb.rowLeft) < 1);
   await shot('table');
+  // hold a header and slide it: the column moves
+  const hdr = () => p.$$eval('.tb-h .th[data-prop]', a => a.map(x => x.dataset.prop).join(','));
+  const hd0 = await hdr();
+  { const [x, y] = await center('.th[data-prop="priority"]'); const [x2] = await center('.th[data-prop="date"]'); await touchDrag(x, y, x2 + 20, y); }
+  const hd = await hdr();
+  check('hold and slide a table header moves the column', hd.split(',').indexOf('priority') === hd.split(',').indexOf('date') + 1, `${hd0} -> ${hd}`);
+  // hold a row and slide it: manual order wins, the sort is turned off with Undo
+  const rows = () => p.$$eval('.tbody > .tr', a => a.map(x => x.dataset.id).join(','));
+  const r0 = await rows();
+  await p.evaluate(() => { document.querySelector('#view .hx').scrollLeft = 0; });
+  { const [x, y] = await center('.tbody > .tr:nth-child(1) .td.title'); const b = await p.locator('.tbody > .tr').nth(2).boundingBox(); await touchDrag(x, y, x, b.y + b.height - 6); }
+  const r1 = await rows();
+  check('hold and slide a table row reorders it and turns sorting off', r1.split(',')[2] === r0.split(',')[0] && /Sorting turned off/.test(await p.textContent('#toastMsg')) && await p.isHidden('#sheet'), `${r0} -> ${r1}`);
   // settings sheet
   await tap('[data-act="settings"]');
   check('settings sheet has cells, segmented controls, switches', (await p.locator('#menu .cell').count()) > 5 && (await p.locator('#menu .segc').count()) > 0 && (await p.locator('#menu .tgl').count()) > 0);
   await shot('settings');
+  const lastGap = await p.evaluate(() => { const mc = document.querySelector('#menu .mc'); mc.scrollTop = 1e5; const g = [...mc.querySelectorAll('.grp')].pop(); return Math.round(mc.getBoundingClientRect().bottom - g.getBoundingClientRect().bottom); });
+  check('settings sheet: last group clears the bottom edge', lastGap >= 24, lastGap + 'px');
+  await p.evaluate(() => { document.querySelector('#menu .mc').scrollTop = 0; });
+  await tap('#menu [data-go="props"]');
+  const pv = () => p.$$eval('#pv-list > [data-key]', a => a.map(x => x.dataset.key).join(','));
+  const pv0 = await pv();
+  { const [x, y] = await center('#pv-list > [data-key]:nth-child(2) .cl'); const b = await p.locator('#pv-list > [data-key]').nth(3).boundingBox(); await touchDrag(x, y, x, b.y + b.height - 4); }
+  const pv1 = await pv(), hd1 = await hdr();
+  check('hold and slide a property in settings reorders the table columns', pv1 !== pv0 && hd1 === pv1, `${pv0} -> ${pv1} | ${hd1}`);
+  await tap('#menu [data-m="back"]');
   await tap('#menu [data-tg="wrap"]');
   check('wrap off applied', (await p.locator('.tbl.nowrap').count()) === 1);
   await tap('#menu .segc[data-seg="density"] button[data-v="tall"]');
@@ -86,12 +118,23 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
   await p.selectOption('#menu select[data-sel="groupBy"]', 'category'); await p.waitForTimeout(300);
   await p.click('#menu [data-m="close"]'); await p.waitForTimeout(400);
   check('list grouped into sections', (await p.locator('.lv-sec').count()) > 1);
+  const done0 = await p.locator('.lv .row.done').count();
+  await tap('[data-act="settings"]'); await tap('#menu [data-tg="showDone"]'); await p.click('#menu [data-m="close"]'); await p.waitForTimeout(400);
+  check('show completed off hides done pages', done0 > 0 && (await p.locator('.lv .row.done').count()) === 0, `${done0} done before`);
   // calendar swipe
   await tap('.vtab[data-v="cal"]');
   const m0 = await p.textContent('.cal-h h2');
   await swipe('.grid', -180, 5);
   const m1 = await p.textContent('.cal-h h2');
   check('calendar swipe changes month', m0 !== m1, `${m0} -> ${m1}`);
+  await tap('[data-act="today"]'); await tap('.cal-h [data-act="scope"][data-v="week"]');
+  check('phone week shows entries as colored lines', (await p.locator('.tg.lines').count()) === 1 && (await p.locator('.tg-allc .adl').count()) > 0);
+  await shot('week');
+  await tap('.ad-tg');
+  check('all-day row collapses to counts', (await p.locator('.tg-allw.shut').count()) === 1 && (await p.locator('.ad-n').count()) > 0);
+  await tap('.ad-tg');
+  check('all-day row expands with a resize handle', (await p.locator('.tg-allw.shut').count()) === 0 && (await p.locator('[data-adrs]').count()) === 1);
+  await tap('.cal-h [data-act="scope"][data-v="month"]');
   // date editor + 12h
   await tap('.vtab[data-v="table"]');
   await p.locator('.tr').first().locator('.td.title').click(); await p.waitForTimeout(400);
@@ -107,7 +150,12 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
   await p.click('#menu [data-m="close"]'); await p.waitForTimeout(350);
   await tap('[data-act="close"]'); await p.waitForTimeout(300);
   await tap('.vtab[data-v="board"]');
-  check('board columns draggable', (await p.locator('.col[data-o]').count()) > 0);
+  check('board columns draggable, including “No …”', (await p.locator('.col[data-o]').count()) > 0 && (await p.locator('.col[data-o=""]').count()) === 1);
+  // custom color: iOS keeps its picker open only if the input is not replaced while picking
+  await tap('.col[data-o] [data-act="grpmenu"]');
+  const same = await p.evaluate(() => new Promise(r => { const i = document.querySelector('#menu .cust input'); i.value = '#ff3366'; i.dispatchEvent(new Event('input', {bubbles:true})); i.value = '#33aa66'; i.dispatchEvent(new Event('input', {bubbles:true})); setTimeout(() => r(document.contains(i) && document.querySelector('#menu .cust input') === i), 300); }));
+  check('custom color picker stays open while picking', same && (await p.locator('.col .tag.c-h-33aa66').count()) === 1);
+  await p.click('#menu [data-m="close"]'); await p.waitForTimeout(350);
   check('no horizontal page overflow', !(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)));
   check('no page errors', !errs.length, errs.join(' | '));
   await ctx.close();
@@ -127,6 +175,18 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
   await q.click('.vtab[data-v="table"]'); await q.waitForTimeout(200); await q.click('[data-act="settings"]'); await q.waitForTimeout(200);
   check('settings popover opens', await q.isVisible('#menu'));
   await q.screenshot({path:SP+'/d-settings.png'});
+  await q.click('#menu [data-go="general"]'); await q.waitForTimeout(150); await q.click('#sd-add'); await q.waitForTimeout(300);
+  const nSample = parseInt(await q.textContent('#bcount'));
+  check('sample data adds realistic volume', nSample > 500, nSample + ' pages');
+  await q.keyboard.press('Escape'); await q.keyboard.press('Escape');
+  await q.click('.vtab[data-v="cal"]'); await q.waitForTimeout(150); await q.click('.cal-h [data-act="scope"][data-v="week"]'); await q.waitForTimeout(300);
+  const ad0 = (await q.locator('.tg-allw').boundingBox()).height, hb = await q.locator('[data-adrs]').boundingBox();
+  await q.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2); await q.mouse.down(); await q.mouse.move(hb.x + hb.width / 2, hb.y - 50, {steps:6}); await q.mouse.up(); await q.waitForTimeout(200);
+  const ad1 = (await q.locator('.tg-allw').boundingBox()).height;
+  check('drag the all-day edge to resize it', ad1 < ad0 - 30, `${ad0} -> ${ad1}`);
+  await q.screenshot({path:SP+'/d-week.png'});
+  await q.click('[data-act="settings"]'); await q.click('#menu [data-go="general"]'); await q.waitForTimeout(150); await q.click('#sd-rm'); await q.click('#sd-rm'); await q.waitForTimeout(300);
+  check('sample data removes only sample pages', (await q.evaluate(() => JSON.parse(localStorage.getItem('tagwerk:v2') || '{}'))) && parseInt(await q.textContent('#bcount')) < 10, await q.textContent('#bcount'));
   check('no page errors', !e2.length, e2.join(' | '));
   await b.close();
   console.log(failed ? `${failed} check(s) FAILED` : 'all checks passed', `(screenshots in ${path.relative(process.cwd(), SP) || SP})`);

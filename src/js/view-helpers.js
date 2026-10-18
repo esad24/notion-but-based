@@ -14,6 +14,7 @@ function visible(v){
   for (const t of S.tasks.values()) {
     if (S.drafts.has(t.id) && t.id !== S.openId) continue;
     if (q && !(t.title.toLowerCase().includes(q) || (t.body || '').toLowerCase().includes(q) || textProps.some(p => String(getV(t, p) || '').toLowerCase().includes(q)))) continue;
+    if (v.showDone === false && isDone(t) && t.id !== S.openId) continue;
     if (!(v.filters || []).every(f => test(f, t))) continue;
     out.push(t);
   }

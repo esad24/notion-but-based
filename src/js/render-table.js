@@ -12,9 +12,10 @@ function renderTable(v, list){
   const head = props.map((p, i) => { const s = sortOf(p.id); return `<div class="th k${i}" data-act="colmenu" data-prop="${p.id}">${TI[p.type] || ''}<span class="nm">${h(p.name)}</span>${s ? `<span class="arr">${s.dir === 'desc' ? '↓' : '↑'}</span>` : ''}<span class="rs" data-rs="${p.id}" data-k="${i}"></span></div>`; }).join('')
     + `<div class="th add" data-act="addprop" aria-label="Add property" title="Add property">${IC.plus}</div>`;
   let rows = '';
-  for (const t of list) {
+  const page = pageOf(v, '*', list);
+  for (const t of page) {
     const c = rowColor(t);
-    rows += `<div class="tr${c ? ' tint c-' + c : ''}" data-id="${t.id}">`;
+    rows += `<div class="tr${c ? ' tint c-' + c : ''}" data-id="${t.id}" data-drag>`;
     for (let i = 0; i < props.length; i++) {
       const p = props[i];
       rows += p.type === 'title'
@@ -26,5 +27,5 @@ function renderTable(v, list){
   const empty = !list.length ? emptyState() : '';
   // header and rows share one horizontal scroller (they move as one); rows scroll vertically inside it
   return `<div class="hx tbx"><div class="tbl${v.wrap === false ? ' nowrap' : ''} d-${v.density || 'regular'}"><div class="tb-hw"><div class="tb-in"><div class="tb-h">${head}</div></div></div>
-    <div class="vy"><div class="tb-in">${rows}<div class="tr-new" data-act="new">${IC.plus}New page</div></div>${empty}<div class="tfoot">Count <b>${list.length}</b></div></div></div></div>`;
+    <div class="vy"><div class="tb-in tbody" data-drop="grp:*">${rows}${moreBtn(v, '*', list.length, page.length)}<div class="tr-new" data-act="new">${IC.plus}New page</div></div>${empty}<div class="tfoot">Count <b>${list.length}</b></div></div></div></div>`;
 }

@@ -5,7 +5,8 @@
 .sheet.show{transform:none;opacity:1}
 .sheet-top{display:flex;align-items:center;gap:4px;padding:10px 12px;flex:none;position:relative;touch-action:none}
 .grab{display:none}
-.sheet-body{overflow:auto;padding:8px 28px 60px;display:flex;flex-direction:column;gap:14px;overscroll-behavior:contain;flex:1}
+.sheet-body::after{content:"";flex:none;height:60px}
+.sheet-body{overflow:auto;padding:8px 28px 0;display:flex;flex-direction:column;gap:14px;overscroll-behavior:contain;flex:1}
 #f-title{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.2;border:0;background:none;outline:none;resize:none;width:100%;padding:0;overflow:hidden}
 #f-title::placeholder,#f-body::placeholder{color:var(--faint)}
 .pprops{display:flex;flex-direction:column;gap:1px}
@@ -26,7 +27,8 @@
   .sheet{top:10px;left:0;width:100%;bottom:0;border-radius:14px 14px 0 0;transform:translateY(40px);padding-left:env(safe-area-inset-left,0px)}
   .grab{display:block;position:absolute;left:50%;top:6px;width:36px;height:5px;border-radius:3px;background:var(--faint);opacity:.5;transform:translateX(-50%)}
   .sheet-top{padding-top:16px}
-  .sheet-body{padding:4px 20px calc(60px + var(--safe-b) + var(--kb))}
+  .sheet-body{padding:4px 20px 0}
+  .sheet-body::after{height:calc(60px + var(--safe-b) + var(--kb))}
   #f-title{font-size:26px}
   #f-body{font-size:17px}
   .pp{grid-template-columns:126px minmax(0,1fr)}
