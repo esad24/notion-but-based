@@ -5,7 +5,9 @@ let rl = 0;
 const renderLater = () => { clearTimeout(rl); rl = setTimeout(render, 350); };
 function renderNow(){
   if (drag && drag.started) { setTimeout(render, 150); return; }
-  renderBar(); customCss(); applyST();
+  applyST(); renderSide();
+  if (S.loading) { $('#vtabs').innerHTML = $('#chipbar').innerHTML = $('#bcount').textContent = ''; $('#view').className = ''; $('#view').innerHTML = '<div class="blank"><b>Loading…</b></div>'; return; }
+  renderBar(); customCss();
   const v = V(), list = visible(v), el = $('#view');
   const vy0 = el.querySelector('.vy');
   const keepX = resetX ? 0 : (el.querySelector('.hx') || {}).scrollLeft || 0, keepY = resetX || !vy0 ? 0 : vy0.scrollTop;

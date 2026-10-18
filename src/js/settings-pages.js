@@ -97,13 +97,13 @@ function settingsPage(){
 function generalPage(){
   return {title:'General', render(c){
     const st = ST();
-    c.innerHTML = grp(fldCell('g-title', st.title, 'Database name'), 'Database name')
+    c.innerHTML = grp(fldCell('g-title', dbName(), 'Database name'), 'Database name', 'Also shown in the sidebar.')
       + grp(segCell('theme', [['system', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']], st.theme), 'Appearance')
       + grp(tglCell('time24', '24-hour time', st.time24 !== false, icb(IC.clock, IC_COL.orange))
-        + selCell('ws', 'Week starts on', [['1', 'Monday'], ['0', 'Sunday'], ['6', 'Saturday']], String(st.weekStart ?? 1), icb(IC.calendar, IC_COL.red)), 'Date & time')
+        + selCell('ws', 'Week starts on', [['1', 'Monday'], ['0', 'Sunday'], ['6', 'Saturday']], String(st.weekStart ?? 1), icb(IC.calendar, IC_COL.red)), 'Date & time', 'Appearance and date settings apply to every database.')
       + sampleGroup();
     const ti = c.querySelector('#g-title');
-    ti.addEventListener('input', () => setST('title', ti.value));
+    ti.addEventListener('input', () => renameItem(S.dbId, ti.value.trim() || 'Untitled'));
     ti.addEventListener('keydown', e => { if (e.key === 'Enter') ti.blur(); });
     bindControls(c, {seg:{theme:t => setST('theme', t)}, tg:{time24:on => setST('time24', on)}, sel:{ws:val => setST('weekStart', +val)}});
     let confirm = false;

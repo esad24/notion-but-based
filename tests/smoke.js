@@ -190,6 +190,58 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
   await q.click('[data-act="settings"]'); await q.click('#menu [data-go="general"]'); await q.waitForTimeout(150); await q.click('#sd-rm'); await q.click('#sd-rm'); await q.waitForTimeout(300);
   check('sample data removes only sample pages', (await q.evaluate(() => JSON.parse(localStorage.getItem('tagwerk:v2') || '{}'))) && parseInt(await q.textContent('#bcount')) < 10, await q.textContent('#bcount'));
   check('no page errors', !e2.length, e2.join(' | '));
+  // workspace: folders and several databases, against an in-memory stand-in for the artifact database
+  console.log('workspace (phone, mock db)');
+  const c3 = await b.newContext({viewport:{width:402,height:874}, isMobile:true, hasTouch:true}); const w = await c3.newPage(); const e3 = [];
+  w.on('pageerror', e => e3.push(e.message));
+  await w.addInitScript(s => {
+    localStorage.clear();
+    const store = new Map(), subs = new Set(), cl = o => JSON.parse(JSON.stringify(o));
+    const docSnap = p => ({exists:store.has(p), data:() => cl(store.get(p)), metadata:{fromCache:false}});
+    const colSnap = p => { const docs = [...store.keys()].filter(k => k.startsWith(p + '/') && !k.slice(p.length + 1).includes('/')).map(k => ({id:k.slice(p.length + 1), data:() => cl(store.get(k))})); return {docs, empty:!docs.length, metadata:{fromCache:false}}; };
+    const notify = () => subs.forEach(x => setTimeout(() => subs.has(x) && x.fn(x.col ? colSnap(x.p) : docSnap(x.p)), 5));
+    const docRef = p => ({set:d => { store.set(p, cl(d)); notify(); return Promise.resolve(); }, delete:() => { store.delete(p); notify(); return Promise.resolve(); }, get:() => Promise.resolve(docSnap(p)),
+      onSnapshot:fn => { const x = {p, fn}; subs.add(x); setTimeout(() => subs.has(x) && fn(docSnap(p)), 5); return () => subs.delete(x); }});
+    const colRef = p => ({doc:id => docRef(p + '/' + id), get:() => Promise.resolve(colSnap(p)),
+      onSnapshot:fn => { const x = {p, fn, col:true}; subs.add(x); setTimeout(() => subs.has(x) && fn(colSnap(p)), 5); return () => subs.delete(x); }});
+    const api = {doc:docRef, collection:colRef};
+    for (const t of s.tasks) { const b = {...t}; delete b.id; store.set('tasks/' + t.id, b); }
+    store.set('meta/schema', {...s.schema, settings:{title:'Tagwerk', theme:'system', time24:true, weekStart:1}}); store.set('meta/views', {views:s.views});
+    window.__store = store; window.claude = {use:async n => n === 'db' ? api : null};
+  }, {...seed, schema:{props:[{id:'title',name:'Name',type:'title'},{id:'status',name:'Status',type:'status',options:[{id:'nb',name:'Nicht begonnen',color:'gray',group:'todo'},{id:'er',name:'Erledigt',color:'green',group:'done'}]}],colorRules:[]}, views:[{id:'table',name:'Table',type:'table',cols:['title','status'],hidden:[],widths:{},filters:[],sorts:[]}]});
+  await w.goto('file://'+SP+'/wrapped.html'); await w.waitForTimeout(500);
+  const wt = async sel => { await w.click(sel); await w.waitForTimeout(380); };
+  const keys = () => w.evaluate(() => [...window.__store.keys()]);
+  check('first run creates the workspace doc with the existing database', (await keys()).includes('meta/app') && (await w.evaluate(() => window.__store.get('meta/app').tree[0].name)) === 'Tagwerk');
+  await wt('[data-act="side"]');
+  check('sidebar drawer opens with the database', await w.evaluate(() => document.querySelector('#side').classList.contains('open')) && (await w.locator('#side .sr.on .sn').textContent()) === 'Tagwerk');
+  await w.screenshot({path:SP+'/w-drawer.png'});
+  await wt('#side [data-sa="newfolder"]'); await w.fill('#nf-name', 'Work'); await wt('#nf-ok');
+  check('new folder appears in the tree', (await w.locator('#side .sr .sn', {hasText:'Work'}).count()) === 1);
+  await wt('#side [data-sa="add"]'); await w.fill('#nd-name', 'Projects'); await wt('#menu [data-k="empty"]'); await wt('#nd-ok');
+  await w.waitForTimeout(500);
+  const st = await w.evaluate(() => { const app = window.__store.get('meta/app'), d = app.tree.find(x => x.name === 'Projects'); return {d, schema:window.__store.get('dbs/' + d.id + '/meta/schema'), views:window.__store.get('dbs/' + d.id + '/meta/views'), title:document.querySelector('#dbTitle').textContent, rows:document.querySelectorAll('.tbody > .tr').length}; });
+  check('new database inside the folder, stored under dbs/<id>/', st.d.parent && st.schema && st.schema.props.length === 2 && st.views.views.length === 1 && st.title === 'Projects' && st.rows === 0, JSON.stringify({parent:st.d.parent, title:st.title, rows:st.rows}));
+  check('drawer closes after opening a database', !(await w.evaluate(() => document.querySelector('#side').classList.contains('open'))));
+  await wt('.bnew'); await w.keyboard.type('First project'); await w.waitForTimeout(700); await wt('[data-act="close"]'); await w.waitForTimeout(600);
+  const pk = (await keys()).filter(k => k.startsWith('dbs/' + st.d.id + '/tasks/'));
+  check('a page in the new database is written to its own collection', pk.length === 1 && (await keys()).filter(k => /^tasks\//.test(k)).length === 4, pk.join());
+  await wt('[data-act="side"]'); await wt('#side [data-sid="main"]'); await w.waitForTimeout(400);
+  check('switching back shows the first database again', (await w.textContent('#dbTitle')) === 'Tagwerk' && (await w.locator('.tbody > .tr').count()) === 4);
+  await w.screenshot({path:SP+'/w-main.png'});
+  await wt('[data-act="side"]'); await wt('#side [data-sid="' + st.d.id + '"]'); await w.waitForTimeout(400);
+  check('and the new one keeps its page', (await w.locator('.tbody > .tr').count()) === 1);
+  await wt('[data-act="side"]'); await w.click('#side .si[data-key="' + st.d.id + '"] [data-sa="more"]'); await w.waitForTimeout(380);
+  await w.fill('#it-name', 'Client projects'); await w.fill('#it-icon', '🚀x'); await w.waitForTimeout(500);
+  check('rename and emoji icon', (await w.textContent('#dbTitle')) === 'Client projects' && (await w.inputValue('#it-icon')) === '🚀' && (await w.locator('#side .emo').first().textContent()) === '🚀');
+  await w.click('#menu [data-a="move"]'); await w.waitForTimeout(350); await w.click('#menu [data-to=""]'); await w.waitForTimeout(350);
+  check('move to top level', (await w.evaluate(id => window.__store.get('meta/app').tree.find(x => x.id === id).parent, st.d.id)) === '' || (await w.waitForTimeout(500), (await w.evaluate(id => window.__store.get('meta/app').tree.find(x => x.id === id).parent, st.d.id)) === ''));
+  await w.click('#menu [data-a="del"]'); await w.click('#menu [data-a="del"]'); await w.waitForTimeout(900);
+  const left = (await keys()).filter(k => k.startsWith('dbs/'));
+  check('deleting a database removes its pages and switches away', !left.length && (await w.textContent('#dbTitle')) === 'Tagwerk', left.join());
+  await w.screenshot({path:SP+'/w-after.png'});
+  check('no page errors', !e3.length, e3.join(' | '));
+  await c3.close();
   await b.close();
   console.log(failed ? `${failed} check(s) FAILED` : 'all checks passed', `(screenshots in ${path.relative(process.cwd(), SP) || SP})`);
   process.exit(failed ? 1 : 0);

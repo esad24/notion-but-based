@@ -10,6 +10,7 @@
   --purple-bg:#e7dff6; --purple-fg:#5a3a94; --pink-bg:#f7dbe8; --pink-fg:#8c2c5b; --red-bg:#f9dcdb; --red-fg:#972d2d;
   --teal-bg:#d3efec; --teal-fg:#1f625c; --cyan-bg:#d4eef6; --cyan-fg:#19607a; --indigo-bg:#dfe1f8; --indigo-fg:#3b3f95; --lime-bg:#e6f2cf; --lime-fg:#4b6214; --fuchsia-bg:#f5dcf5; --fuchsia-fg:#85298a; --slate-bg:#e1e5ea; --slate-fg:#3d4652;
   --grouped:#f2f2f7; --cell:#ffffff; --sep:rgba(60,60,67,.2); --seg-bg:rgba(118,118,128,.12); --seg-bg-strong:rgba(120,120,128,.2); --green-sw:#34c759;
+  --side-bg:#f7f7f5; --side-on:rgba(55,53,47,.08);
   --kb:0px; --safe-b:0px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){

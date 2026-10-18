@@ -1,11 +1,11 @@
-// app settings in schema.settings: ST() read, setST() write, applyST() title/theme, fmtT() 12/24 h, WS() week start
-// app-wide settings live with the schema so they sync across devices
-const ST = () => ({title:'Tagwerk', theme:'system', time24:true, weekStart:1, ...((S.schema && S.schema.settings) || {})});
+// app-wide settings in the workspace doc (meta/app): ST() read, setST() write, applyST() title/theme, fmtT() 12/24 h, WS() week start
+// older versions kept them in the first database's schema; those are the fallback until the workspace has its own
+const ST = () => ({theme:'system', time24:true, weekStart:1, ...((S.dbId === 'main' && S.schema && S.schema.settings) || {}), ...((S.app && S.app.settings) || {})});
 const hostTheme = document.documentElement.getAttribute('data-theme');
-function setST(k, val){ S.schema.settings = {...ST(), [k]:val}; saveSchema(); applyST(); render(); }
+function setST(k, val){ S.app.settings = {...(S.app.settings || {}), [k]:val}; saveApp(); applyST(); render(); }
 function applyST(){
   const st = ST(), r = document.documentElement;
-  const t = $('#dbTitle'); if (t.textContent !== (st.title || 'Untitled')) t.textContent = st.title || 'Untitled';
+  const t = $('#dbTitle'), name = dbName(); if (t.textContent !== name) t.textContent = name;
   if (st.theme === 'light' || st.theme === 'dark') r.setAttribute('data-theme', st.theme);
   else if (r.dataset.tw) { if (hostTheme) r.setAttribute('data-theme', hostTheme); else r.removeAttribute('data-theme'); }
   r.dataset.tw = st.theme;

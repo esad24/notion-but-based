@@ -7,4 +7,5 @@
   --purple-bg:#3f305b; --purple-fg:#cbb4f3; --pink-bg:#572a41; --pink-fg:#f3aaca; --red-bg:#5c2727; --red-fg:#f6a5a3;
   --teal-bg:#1f4542; --teal-fg:#8fdcd2; --cyan-bg:#1c4150; --cyan-fg:#93d6ee; --indigo-bg:#2e3160; --indigo-fg:#b4b8f5; --lime-bg:#3a4520; --lime-fg:#c6e48e; --fuchsia-bg:#522a55; --fuchsia-fg:#eeaaf0; --slate-bg:#343a42; --slate-fg:#c5ccd6;
   --grouped:#1c1c1e; --cell:#2c2c2e; --sep:rgba(84,84,88,.6); --seg-bg:rgba(118,118,128,.24); --seg-bg-strong:rgba(120,120,128,.36); --green-sw:#30d158;
+  --side-bg:#202020; --side-on:rgba(255,255,255,.08);
   color-scheme:dark;

@@ -7,6 +7,7 @@
 /* Build entry: `node build.js` replaces each @include line with that file (paths relative to src/). Order is the cascade: later files win ties. */
 /* @include styles/tokens.css */
 /* @include styles/base.css */
+/* @include styles/sidebar.css */
 /* @include styles/values.css */
 /* @include styles/table.css */
 /* @include styles/board.css */
@@ -22,8 +23,11 @@
 <style id="cuscss"></style>
 
 <div id="app">
+  <aside class="side" id="side" aria-label="Databases and folders"></aside>
+  <div class="side-scrim" id="sscrim"></div>
+  <div class="main">
   <header class="top">
-    <div class="title-row"><h1 id="dbTitle">Tagwerk</h1><span class="sync" id="sync" data-s="local">Loading</span>
+    <div class="title-row"><button class="ibtn sidebtn" data-act="side" aria-label="Databases and folders" title="Sidebar"><svg viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="M6 2.5v11M3.3 5.5h1M3.3 7.5h1"/></svg></button><h1 id="dbTitle" data-act="sidetitle">Tagwerk</h1><span class="sync" id="sync" data-s="local">Loading</span>
       <div class="tools">
         <button class="ibtn" data-act="search" aria-label="Search" title="Search (/)"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg></button>
         <button class="ibtn" data-act="filters" id="fbtn" aria-label="Filter" title="Filter"><svg viewBox="0 0 16 16"><path d="M2 3.5h12M4.5 8h7M7 12.5h2"/></svg></button>
@@ -38,6 +42,7 @@
   </header>
   <main id="view" tabindex="-1"></main>
   <nav class="bbar" id="bbar"><button class="bnew" data-act="new"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="7.5" fill="currentColor" stroke="none"/><path d="M8 4.6v6.8M4.6 8h6.8" stroke="#fff" stroke-width="1.6"/></svg>New page</button><span class="bcount" id="bcount"></span></nav>
+  </div>
 </div>
 
 <div class="scrim" id="scrim" hidden></div>
@@ -76,6 +81,7 @@
 // @include js/sorting.js
 // @include js/view-helpers.js
 // @include js/persistence.js
+// @include js/workspace.js
 // @include js/mutations.js
 // @include js/sample-data.js
 // @include js/schema.js
@@ -93,6 +99,7 @@
 // @include js/prop-menus.js
 // @include js/rule-editors.js
 // @include js/settings-pages.js
+// @include js/sidebar.js
 // @include js/toast.js
 // @include js/input.js
 // @include js/resize.js

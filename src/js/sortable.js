@@ -19,7 +19,7 @@ function liftSort(){
   s.lifted = true;
   s.items = [...s.list.querySelectorAll(':scope > [data-key]')];
   s.i0 = s.idx = s.items.indexOf(s.item);
-  s.sc = s.list.closest('.mc') || s.list.closest('.sheet-body') || document.scrollingElement;
+  s.sc = s.list.closest('.mc, .sheet-body, .side-sc') || document.scrollingElement;
   s.st0 = s.sc.scrollTop;
   const r = s.items.map(x => x.getBoundingClientRect());
   s.mid = r.map(x => x.top + x.height / 2);

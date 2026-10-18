@@ -2,6 +2,7 @@
 const S = {
   tasks:new Map(), schema:defaultSchema(), views:defaultViews(), vid:'board', q:'',
   openId:null, drafts:new Set(), month:null, sel:null, more:{},
+  dbId:'main', app:null, loading:false, // current database, workspace (tree + app settings), waiting for a database's first snapshot
 };
 const P = id => S.schema.props.find(p => p.id === id);
 const V = () => S.views.find(v => v.id === S.vid) || S.views[0];

@@ -1,20 +1,29 @@
-// localStorage cache, artifact db writes (debounced, chained per key), sync indicator, legacy migration, connect() + snapshots
-const CACHE = 'tagwerk:v2', VID_KEY = 'tagwerk:vid'; // localStorage keys: data copy, last open view
+// per-database paths and localStorage cache, db writes (debounced, chained per key, flushed before switching databases), sync indicator, legacy migration
+// The first database keeps the original top-level paths (tasks, meta/schema, meta/views); others live under dbs/<id>/.
+const CACHE = 'tagwerk:v2', APP_KEY = 'tagwerk:app', DB_KEY = 'tagwerk:db'; // localStorage keys: data copy, workspace, last database
 let db = null;
-const timers = new Map(), chains = new Map(), busy = new Map(), metaTimers = {};
+const timers = new Map(), pend = new Map(), chains = new Map(), busy = new Map(), metaTimers = {}, metaPend = {};
+const dbBase = (id = S.dbId) => id === 'main' ? '' : `dbs/${id}/`;
+const tasksPath = (id = S.dbId) => dbBase(id) + 'tasks';
+const metaPath = (which, id = S.dbId) => dbBase(id) + 'meta/' + which;
+const cacheKey = (id = S.dbId) => id === 'main' ? CACHE : CACHE + ':' + id;
+const vidKey = (id = S.dbId) => id === 'main' ? 'tagwerk:vid' : 'tagwerk:vid:' + id;
+const wkey = id => S.dbId + '/' + id; // write-queue key of a page in the current database
 function cacheLocal(){
-  try { localStorage.setItem(CACHE, JSON.stringify({tasks:[...S.tasks.values()].filter(t => !S.drafts.has(t.id)), schema:S.schema, views:S.views})); } catch {}
+  clearTimeout(cacheT);
+  try { localStorage.setItem(cacheKey(), JSON.stringify({tasks:[...S.tasks.values()].filter(t => !S.drafts.has(t.id)), schema:S.schema, views:S.views})); } catch {}
 }
 let cacheT = 0;
 const cacheSoon = () => { clearTimeout(cacheT); cacheT = setTimeout(cacheLocal, 400); };
 function loadCache(){
   try {
-    const c = JSON.parse(localStorage.getItem(CACHE) || 'null');
-    if (!c) return;
-    if (Array.isArray(c.tasks)) c.tasks.forEach(t => S.tasks.set(t.id, t));
+    const c = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
+    if (!c) return false;
+    if (Array.isArray(c.tasks)) c.tasks.forEach(t => S.tasks.set(t.id, migrateTask(t.id, t)));
     if (c.schema && Array.isArray(c.schema.props)) S.schema = c.schema;
     if (Array.isArray(c.views) && c.views.length) S.views = c.views;
-  } catch {}
+    return true;
+  } catch { return false; }
 }
 function setSync(s, label){ const el = $('#sync'); el.dataset.s = s; el.textContent = label; }
 function refreshSync(){
@@ -48,32 +57,44 @@ function persist(id, delay = 0){
   cacheSoon();
   if (!db || S.drafts.has(id)) return;
   clearTimeout(timers.get(id));
-  timers.set(id, setTimeout(() => {
-    timers.delete(id);
+  const col = tasksPath(), key = wkey(id);
+  const run = () => {
+    timers.delete(id); pend.delete(id);
     const cur = S.tasks.get(id); if (!cur) return;
     const body = {...cur}; delete body.id;
-    queueWrite(id, () => db.collection('tasks').doc(id).set(body));
-  }, delay));
+    queueWrite(key, () => db.collection(col).doc(id).set(body));
+  };
+  pend.set(id, run); timers.set(id, setTimeout(run, delay));
   refreshSync();
 }
 function persistDelete(id){
-  clearTimeout(timers.get(id)); timers.delete(id); cacheSoon();
-  if (db) queueWrite(id, () => db.collection('tasks').doc(id).delete());
+  clearTimeout(timers.get(id)); timers.delete(id); pend.delete(id); cacheSoon();
+  const col = tasksPath();
+  if (db) queueWrite(wkey(id), () => db.collection(col).doc(id).delete());
 }
 function saveMeta(which){
   cacheSoon();
   if (!db) return;
   clearTimeout(metaTimers[which]);
-  metaTimers[which] = setTimeout(() => {
-    metaTimers[which] = 0;
-    const body = which === 'schema' ? clone(S.schema) : {views:clone(S.views)};
-    queueWrite('meta-' + which, () => db.doc('meta/' + which).set(body));
-  }, 350);
+  const path = which === 'app' ? 'meta/app' : metaPath(which), key = which === 'app' ? 'app' : wkey('meta-' + which);
+  const run = () => {
+    metaTimers[which] = 0; metaPend[which] = null;
+    const body = which === 'schema' ? clone(S.schema) : which === 'views' ? {views:clone(S.views)} : clone(S.app);
+    queueWrite(key, () => db.doc(path).set(body));
+  };
+  metaPend[which] = run; metaTimers[which] = setTimeout(run, 350);
   refreshSync();
 }
 const saveSchema = () => saveMeta('schema');
 const saveViews = () => saveMeta('views');
-const metaBusy = which => !!metaTimers[which] || busy.has('meta-' + which);
+const saveApp = () => { try { localStorage.setItem(APP_KEY, JSON.stringify(S.app)); } catch {} saveMeta('app'); };
+const metaBusy = which => !!metaTimers[which] || busy.has(which === 'app' ? 'app' : wkey('meta-' + which));
+// before switching databases: send every pending write now, while S still holds the database it belongs to
+function flushWrites(){
+  for (const run of [...pend.values()]) run();
+  for (const w of ['schema', 'views']) if (metaPend[w]) { clearTimeout(metaTimers[w]); metaPend[w](); }
+  cacheLocal();
+}
 
 function migrateTask(id, d){
   if (d.p) return {...d, id};
@@ -84,38 +105,4 @@ function migrateTask(id, d){
   if (d.category) p.category = d.category;
   if (d.date) p.date = {d:d.date, t:d.time || '', e:d.end || ''};
   return {id, title:d.title || '', body:d.notes || '', created:d.created || Date.now(), updated:d.updated || Date.now(), order:d.order ?? d.created ?? 0, p};
-}
-
-async function connect(){
-  let api = null;
-  try { api = window.claude && window.claude.use ? await window.claude.use('db') : null; } catch { api = null; }
-  if (!api) { refreshSync(); return; }
-  db = api; refreshSync();
-  db.collection('tasks').onSnapshot(snap => {
-    if (snap.metadata.fromCache && snap.empty) return;
-    let changed = false;
-    const next = new Map();
-    for (const d of snap.docs) {
-      const b = d.data(); if (!b) continue;
-      const t = migrateTask(d.id, b), cur = S.tasks.get(d.id);
-      if (cur && stable(cur) === stable(t)) next.set(d.id, cur); else { next.set(d.id, t); changed = true; }
-    }
-    for (const id of timers.keys()) { const l = S.tasks.get(id); if (l) next.set(id, l); }
-    for (const id of busy.keys()) { const l = S.tasks.get(id); if (l && !next.has(id)) next.set(id, l); }
-    for (const id of S.drafts) { const l = S.tasks.get(id); if (l) next.set(id, l); }
-    if (!changed && next.size === S.tasks.size) return; // only our own writes echoed back
-    S.tasks = next; cacheSoon(); render();
-  }, e => { console.error(e); setSync('error', 'Offline'); });
-  db.doc('meta/schema').onSnapshot(snap => {
-    if (metaBusy('schema')) return;
-    const b = snap.exists && snap.data();
-    if (b && Array.isArray(b.props) && stable(b) !== stable(S.schema)) { S.schema = clone(b); cacheSoon(); render(); if (MN.stack.length) redrawMenu(); }
-  }, e => console.error(e));
-  db.doc('meta/views').onSnapshot(snap => {
-    if (metaBusy('views')) return;
-    const b = snap.exists && snap.data();
-    if (b && Array.isArray(b.views) && b.views.length && stable(b.views) !== stable(S.views)) {
-      S.views = clone(b.views); if (!S.views.some(v => v.id === S.vid)) S.vid = S.views[0].id; cacheSoon(); render(); if (MN.stack.length) redrawMenu();
-    }
-  }, e => console.error(e));
 }

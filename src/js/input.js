@@ -4,16 +4,18 @@ let suppressClick = false;
 const swallowClick = () => { suppressClick = true; setTimeout(() => { suppressClick = false; }, 0); };
 document.addEventListener('click', e => {
   if (suppressClick) { e.preventDefault(); e.stopPropagation(); return; }
-  if (e.target.closest('#menu')) return;
+  if (e.target.closest('#menu,#side')) return;
   if (e.target.closest('a[href]')) return;
   const a = e.target.closest('[data-act]'), act = a && a.dataset.act, v = V();
   if (act === 'tab') {
     if (a.dataset.v === S.vid) return openMenu(a, settingsPage());
     S.vid = a.dataset.v; const nv = V(); scrollToMorning = nv.type === 'calendar' && scopeOf(nv) !== 'month';
-    $('#view').scrollTo(0, 0); resetX = true; try { localStorage.setItem(VID_KEY, S.vid); } catch {}
+    $('#view').scrollTo(0, 0); resetX = true; try { localStorage.setItem(vidKey(), S.vid); } catch {}
     renderNow(); a.scrollIntoView({inline:'nearest', block:'nearest', behavior:'smooth'});
     return;
   }
+  if (act === 'side') return toggleSide();
+  if (act === 'sidetitle') return narrow() && toggleSide(true);
   if (act === 'addview') return openMenu(a, addViewPage());
   if (act === 'settings') return openMenu(a, settingsPage());
   if (act === 'filters') { if (!(v.filters || []).length) { v.filters = [newRule(defaultCondProp())]; saveViews(); } return openMenu(a, filtersPage()); }
