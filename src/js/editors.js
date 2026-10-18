@@ -90,12 +90,20 @@ function colorGrid(cur){
   return grp(`<div class="swl">${COLORS.map(k => `<button class="sw c-${k}${k === cur ? ' on' : ''}" data-c="${k}"><i></i>${cap(k)}</button>`).join('')}</div>`
     + `<label class="cell cust"><span class="sw-i c-${isCustom(cur) ? cur : 'none'}"></span><span class="cl">Custom color</span><span class="cv"><input type="color" value="${isCustom(cur) ? '#' + cur.slice(2) : '#7a6ff0'}" aria-label="Pick a custom color"></span></label>`, 'Color');
 }
+// pick(k, custom): a preset tap, or a custom color while iOS's picker (grid, spectrum, sliders) is still open.
+// A custom pick must not redraw the menu: replacing the input closes the picker after the first color.
 function bindColorGrid(c, pick){
-  c.querySelector('.swl').addEventListener('click', e => { const b = e.target.closest('.sw'); if (b) pick(b.dataset.c); });
-  c.querySelector('.cust input').addEventListener('change', e => pick('h-' + e.target.value.slice(1).toLowerCase()));
+  c.querySelector('.swl').addEventListener('click', e => { const b = e.target.closest('.sw'); if (b) pick(b.dataset.c, false); });
+  const inp = c.querySelector('.cust input');
+  const live = () => {
+    c.querySelectorAll('.swl .sw.on').forEach(b => b.classList.remove('on'));
+    c.querySelector('.cust .sw-i').style.background = inp.value;
+    pick('h-' + inp.value.slice(1).toLowerCase(), true);
+  };
+  inp.addEventListener('input', live); inp.addEventListener('change', live);
 }
 function colorPickPage(cur, onPick){
-  return {title:'Color', render(c){ c.innerHTML = colorGrid(cur); bindColorGrid(c, k => { onPick(k); popMenu(); }); }};
+  return {title:'Color', render(c){ c.innerHTML = colorGrid(cur); bindColorGrid(c, (k, custom) => { onPick(k); if (!custom) popMenu(); }); }};
 }
 function optionPage(pid, oid){
   let confirm = false;
@@ -110,7 +118,7 @@ function optionPage(pid, oid){
     nm.addEventListener('input', () => { const x = O(); if (!x) return; x.name = nm.value || 'Untitled'; saveSchema(); render(); });
     nm.addEventListener('keydown', e => { if (e.key === 'Enter') nm.blur(); });
     bindControls(c, {seg:{grp:v => { const x = O(); if (x) { x.group = v; saveSchema(); render(); } }}});
-    bindColorGrid(c, k => { const x = O(); if (!x) return; x.color = k; saveSchema(); render(); redrawMenu(); });
+    bindColorGrid(c, (k, custom) => { const x = O(); if (!x) return; x.color = k; saveSchema(); render(); if (!custom) redrawMenu(); });
     c.querySelector('#op-del').addEventListener('click', e => {
       const n = [...S.tasks.values()].filter(t => { const v = t.p && t.p[pid]; return Array.isArray(v) ? v.includes(oid) : v === oid; }).length;
       if (n && !confirm) { confirm = true; e.currentTarget.querySelector('.cl').textContent = `Tap again: clears it from ${n} page${n > 1 ? 's' : ''}`; return; }

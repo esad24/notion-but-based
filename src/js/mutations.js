@@ -1,10 +1,11 @@
 // task changes: update, setVal, restore (undo), createTask (drafts), removeTask, toggleDone
-function update(id, patch, delay = 0){
+// quiet: typing in the page sheet; the view behind it catches up once typing pauses instead of on every key
+function update(id, patch, delay = 0, quiet = false){
   const old = S.tasks.get(id); if (!old) return null;
   const t = {...old, ...patch, updated:Date.now()};
   S.tasks.set(id, t);
   if (S.drafts.has(id) && t.title.trim()) S.drafts.delete(id);
-  persist(id, delay); render();
+  persist(id, delay); quiet ? renderLater() : render();
   return old;
 }
 function setVal(id, pid, v, delay = 0){

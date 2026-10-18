@@ -8,7 +8,7 @@ Before changing UI or behavior, load the general skill in `.claude/skills/web-ap
 - Source: small files in `src/` (vanilla JS + CSS, no libraries). `node build.js` stitches them into **`dist/tagwerk.html`**, the file that gets published. `dist/` is git-ignored; never edit it.
 - Runtime: a Claude Artifact with capability `db` (shared document store). Live artifact: https://claude.ai/artifact/EXotYFsGPMVa3n1SxZcW58 (private to the owner).
 - Local fallback: `localStorage` key `tagwerk:v2` (opens instantly, works without the database), last view in `tagwerk:vid`.
-- Tests: `node tests/smoke.js` builds, then drives the app in headless Chromium (iPhone-size touch context and desktop). Prints `ok`/`FAIL` per check, exits 1 on failure, screenshots in `tests/out/`. Needs Playwright (`npm i playwright` or the preinstalled one at `/opt/node-tools/node_modules/playwright`).
+- Tests: `node tests/smoke.js` builds, then drives the app in headless Chromium (iPhone-size touch context and desktop). Prints `ok`/`FAIL` per check, exits 1 on failure, screenshots in `tests/out/`. Touch gestures that need real pointer events (hold and slide) go through CDP `Input.dispatchTouchEvent` (`touchDrag`). Needs Playwright (`npm i playwright` or the preinstalled one at `/opt/node-tools/node_modules/playwright`).
 
 ## Product rules (from the owner)
 - Content views keep the Notion look; **settings and menus follow Apple iOS patterns** (grouped lists, sheets, switches, segmented controls).
@@ -42,20 +42,22 @@ Every file starts with a one-line comment describing it (`head -1 src/js/*.js sr
 | `constants.js` | `TYPES`, `HAS_OPTS`, `GROUPABLE`, `IS_DATEISH`, `COLORS`, `GROUPS`, `FORMATS`, `LAYOUTS`, `DEF_W` |
 | `defaults.js` | `defaultSchema()`, `defaultViews()` |
 | `state.js` | `S`, `P(id)`, `V()`, `opt`, `statusProp`, `isGroupProp`, `firstPropId`, `groupOpt` |
-| `dates.js` | date keys, `toMin/fromMin`, `relDate`, `dateLabel`, `endDay/sameDay/lastDay`, `durOf`, `weekStart` |
+| `dates.js` | date keys, `toMin/fromMin`, cached `fmt()` Intl formatters, memoized `relDate`, `dateLabel`, `endDay/sameDay/lastDay`, `durOf`, `weekStart` |
 | `settings.js` | `ST()`, `setST()`, `applyST()`, `fmtT()`, `WS()` |
 | `values.js` | `getV`, `isEmpty`, `fmtNum`, `safeUrl`, `tagO`, `isDone`, `disp` |
 | `conditions.js` | `OPS`, `opsFor`, `ruleReady`, `test`, `rowColor`, `condLabel` |
 | `sorting.js` | `sk`, `comparator` |
 | `view-helpers.js` | `viewProps`, `shownProps`, `visible` |
 | `persistence.js` | cache, `persist`, `queueWrite`, `saveSchema/saveViews`, sync indicator, `migrateTask`, `connect` |
-| `mutations.js` | `update`, `setVal`, `restore`, `createTask`, `removeTask`, `toggleDone` |
+| `mutations.js` | `update` (`quiet` = re-render the view only after typing pauses), `setVal`, `restore`, `createTask`, `removeTask`, `toggleDone` |
+| `sample-data.js` | `sampleTasks()` (~700 realistic pages around today, `demo:true`), `addSamples`, `removeSamples` |
 | `schema.js` | `addOption`, `changeType`, `addProp`, `deleteProp`, `duplicateProp`, `deleteOption`, `customCss` |
-| `render.js` | `render`, `renderNow`, `renderBar`, `emptyState`, `groupTasks` |
+| `render.js` | `render`, `renderLater`, `renderNow`, `renderBar`, `emptyState`, `groupTasks`, `setGroupOrder`, paging (`pageOf`, `moreBtn`, `showMore`) |
 | `render-table.js` / `render-board.js` / `render-list.js` / `render-calendar.js` | one view each (`rowHtml` lives in list, `evHtml`/time grid in calendar) |
 | `sheet.js` | page sheet: `openSheet`, `closeSheet`, `renderSheet` |
 | `gestures.js` | `sheetGestures`, row swipes, keyboard hiding, calendar swipes |
-| `menu.js` | menu stack `MN`, `openMenu/pushMenu/popMenu/closeMenu/dismissMenu/drawMenu/placeMenu`, `sortable` |
+| `menu.js` | menu stack `MN`, `openMenu/pushMenu/popMenu/closeMenu/dismissMenu/drawMenu/placeMenu` |
+| `sortable.js` | `sortable(list, onDone)`: hold a row (or grab the grip) and slide, animated, auto-scrolls; `sorting` state |
 | `ui-blocks.js` | grouped-list builders (`grp`, `linkCell`, `actCell`, `tglCell`, `segCell`, `selCell`, `fldCell`), `bindControls` |
 | `editors.js` | `openEditor`, `textPage`, `pickerPage`, `optionPage`, `colorGrid`, `datePage` |
 | `prop-menus.js` | `propPage`, `typePage`, `newPropPage` |
@@ -63,7 +65,8 @@ Every file starts with a one-line comment describing it (`head -1 src/js/*.js sr
 | `settings-pages.js` | `settingsPage`, `generalPage`, `viewsPage`, `allPropsPage`, `propsVisPage`, `groupsPage`, `addViewPage`, `addGroupPage`, `trayPage`, `setLayout` |
 | `toast.js` | `toast(msg, undo)` |
 | `input.js` | delegated click handler (`data-act` values), search, keyboard shortcuts, `swallowClick` |
-| `drag.js` | column resize, drag & drop |
+| `resize.js` | table column resize, all-day area resize (`rsz`) |
+| `drag.js` | drag & drop: cards, list and table rows, table headers, board columns, calendar entries |
 | `boot.js` | startup |
 
 ### `src/styles/` (cascade order)
@@ -78,15 +81,16 @@ Every file starts with a one-line comment describing it (`head -1 src/js/*.js sr
 
 ## Data model
 Collections in the artifact database:
-- `tasks/<id>`: `{title, body, created, updated, order, p:{<propId>: value}}`. Value types: select/status = option id; multi_select = `[ids]`; checkbox = `true`; number; text/url/email/phone = string; **date = `{d:'YYYY-MM-DD', t:'HH:MM', ed:'YYYY-MM-DD', e:'HH:MM'}`** (only `d` required; legacy values lack `ed`, then `e` belongs to day `d`; helpers `endDay`, `sameDay`, `lastDay`). Empty values are removed from `p`. Seed ids are `t01`..`t19`; new ids come from `newId()`.
+- `tasks/<id>`: `{title, body, created, updated, order, p:{<propId>: value}, demo?}` (`demo:true` marks sample pages; ids `sx0000`..). Value types: select/status = option id; multi_select = `[ids]`; checkbox = `true`; number; text/url/email/phone = string; **date = `{d:'YYYY-MM-DD', t:'HH:MM', ed:'YYYY-MM-DD', e:'HH:MM'}`** (only `d` required; legacy values lack `ed`, then `e` belongs to day `d`; helpers `endDay`, `sameDay`, `lastDay`). Empty values are removed from `p`. Seed ids are `t01`..`t19`; new ids come from `newId()`.
 - `meta/schema`: `{props:[{id,name,type,options?:[{id,name,color,group?}],fmt?}], colorRules:[{id,prop,op,val,color}], settings:{title,theme,time24,weekStart}}`. `title` is a built-in property. Default property ids: `title, priority, date, status, category, created, updated`; option ids for priority `sh,h,mh,m,n`, for status `nb,ia,er`; category option ids are slugs (`business, job, looks, ...`). Users can add more properties (ids `p<random>`).
-- `meta/views`: `{views:[{id,name,type:'table'|'board'|'calendar'|'list', cols, hidden, filters:[{prop,op,val}], sorts:[{prop,dir}], widths, groupBy, hiddenGroups, hideEmpty, showNone, showCheck, dateProp, scope, wrap, density}]}`. Default ids: `board, table, cal`; views added later get `newId()` ids.
+- `meta/views`: `{views:[{id,name,type:'table'|'board'|'calendar'|'list', cols, hidden, filters:[{prop,op,val}], sorts:[{prop,dir}], widths, groupBy, hiddenGroups, hideEmpty, showNone, nonePos, showCheck, showDone, dateProp, scope, allDay:{open,h}, wrap, density}]}`. `nonePos` = index in the group property's options where the "No <property>" group sits; `showDone:false` hides completed pages (default for new List views); `allDay` = time grid all-day area expanded and its height in px. Default ids: `board, table, cal`; views added later get `newId()` ids.
 - Legacy: tasks written by earlier versions have flat fields (`status`, `priority`, `category`, `date`, `time`, `end`, `notes`); `migrateTask()` converts them on read. `meta/options` is a dead leftover.
 - Colors: names in `COLORS` or custom `h-rrggbb`; CSS `.c-<name>` sets `--tbg/--tfg`; custom ones are generated into `#cuscss` by `customCss()` using `color-mix`.
 
 ## Runtime behavior
 ### State and rendering
-- Global `S = {tasks:Map, schema, views, vid, q, openId, drafts:Set, month, sel}`. `visible(view)` applies search and view filters, then sorts.
+- Global `S = {tasks:Map, schema, views, vid, q, openId, drafts:Set, month, sel, more}`. `visible(view)` applies search, Show completed and view filters, then sorts.
+- Paging: tables render 150 rows, board columns and list groups 60, then a "Show more" button (`S.more[viewId:group]`) that an IntersectionObserver clicks when it scrolls near. Keeps a full database (~700+ pages) at about 10-25 ms per render in the headless test.
 - `render()` schedules one `requestAnimationFrame`; `renderNow()` rebuilds the current view via `innerHTML`, restores `scrollLeft` of `.hx` and `scrollTop` of `.vy`, and re-renders the open page sheet. A drag in progress defers rendering.
 - Drafts: a new page lives in `S.drafts` until its title is non-empty and is not persisted or cached while a draft.
 
@@ -96,12 +100,15 @@ Collections in the artifact database:
 
 ### Persistence and sync
 - `connect()` obtains `db` and subscribes to `tasks`, `meta/schema`, `meta/views`. Snapshots that only echo local writes are ignored by comparing `stable()` JSON; tasks with pending writes (`timers`, `busy`) or drafts are kept.
-- Writes: `persist(id, delay)` debounces then `queueWrite(key, fn)` chains per key; `saveSchema()`/`saveViews()` debounce 350 ms; deletes via `persistDelete`. `cacheLocal()` writes the `localStorage` copy 400 ms after changes.
+- Writes: `persist(id, delay)` debounces then `queueWrite(key, fn)` chains per key, at most 4 in flight overall, retrying `unavailable`/`resource_exhausted` with backoff; `saveSchema()`/`saveViews()` debounce 350 ms; deletes via `persistDelete`. `cacheLocal()` writes the `localStorage` copy 400 ms after changes.
 - Sync indicator (`#sync`, hidden text on phone): `saving`, `ok`, `local`, `error`.
 
 ### Rules, views, menus
 - Rules engine: an unfinished rule (blank value) does nothing; `closeMenu()` drops unfinished filters. Filters and color rules share `test`; `rowColor` takes the first ready matching rule.
-- Board: drag cards between columns (`data-drop="grp:<id>"`), hold a column header to reorder. List: rows are `.sw-row` (swipeable). Calendar: scopes month, week, 3day, day; multi-day dates are placed on every covered day; time grid has drag to move (15 min snap) and a bottom handle to resize.
+- Board: drag cards between columns (`data-drop="grp:<id>"`), hold a column header to reorder (the "No …" column too, `data-o=""`). List: rows are `.sw-row` (swipeable). Table: hold a header to move the column, hold a row to reorder (`.tbody`, `grp:*`). Dropping into a sorted view turns its sort off with Undo.
+- Calendar: scopes month, week, 3day, day; multi-day dates are placed on every covered day; month cells show 3 entries + "+N more" (desktop) or 4 dots (phone). Time grid has drag to move (15 min snap) and a bottom handle to resize; the all-day area collapses (`adtoggle`) and resizes by its bottom edge (`[data-adrs]`). On a phone week (`.tg.lines`) entries are colored lines and tapping an all-day cell opens that day.
+- Settings lists reorder with `sortable()`; "All properties" order is applied to every view's `cols`; the page sheet lists properties in the current view's order.
+- Colors: a custom color updates live without redrawing the menu (replacing the `<input type=color>` closes iOS's picker).
 - `#menu` is a popover on desktop and a bottom sheet on phones; `MN.tall` makes it near full height while typing; `--kb` from `visualViewport` keeps content above the keyboard.
 - Drag and drop: mouse starts after 5 px, touch after a 360 ms hold; drop kinds `grp`, `date`, `slot`, `allday`.
 
@@ -120,6 +127,8 @@ Inside a Claude Code session with the Artifact tool: run `node build.js`, then p
 ## Known limits and ideas
 - Whole-view `innerHTML` rebuild; fine to about 1,000 tasks, hitches at a few thousand. Ideas: in-place row updates, virtualization, archive finished tasks, skip background re-render while typing in the sheet.
 - Whole `tasks` collection is subscribed and mirrored in `localStorage` (about 5 MB limit); platform guidance is hundreds to low thousands of documents, hard cap 25,000.
-- Not implemented: formulas, relations, rollups, "any of" filter groups, dragging table rows to reorder, forms, recurring tasks, reminders/notifications.
+- Not implemented: formulas, relations, rollups, "any of" filter groups, forms, recurring tasks, reminders/notifications.
+- Sample data: Settings → General → "Add sample pages" / "Remove N sample pages" (only `demo:true` pages).
+- `:hover` rules live inside `@media (hover:hover)` (iOS keeps hover after a tap); touch feedback uses `:active`. Scrolling flex containers get end space from an `::after` child, because Safari drops their bottom padding.
 - Not verified on a real device: finger feel of gestures, iOS keyboard inside the Claude app, Safari-only rendering. Tests run in Chromium.
 - On phones the table text and the sheet's Done button use the desktop font sizes (14 px and 15 px): the larger phone sizes were overridden in the original file and were removed in the split to keep the look unchanged.

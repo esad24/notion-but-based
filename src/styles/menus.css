@@ -7,7 +7,9 @@
 .mhead .mt{grid-column:2;font-weight:600;font-size:14px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .mback{grid-column:1;justify-self:start;display:flex;align-items:center;gap:2px;color:var(--accent);font-weight:500;height:32px;padding:0 4px 0 0}
 .mdone{grid-column:3;justify-self:end;color:var(--accent);font-weight:600;padding:0 8px;height:32px}
-.mc{overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;padding:4px 6px 8px;flex:1;min-height:0}
+.mc{overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;padding:4px 6px 0;flex:1;min-height:0}
+/* end space as a child: Safari drops the bottom padding of a scrolling flex container, which hid the last row */
+.mc::after{content:"";flex:none;height:8px}
 .grp-h{font-size:11.5px;color:var(--muted);padding:12px 8px 5px;letter-spacing:.04em;text-transform:uppercase;flex:none}
 .grp-h:first-child{padding-top:4px}
 .grp{display:flex;flex-direction:column;flex:none}
@@ -48,10 +50,11 @@ textarea.fld{height:auto;min-height:110px;padding:8px 0;resize:none;line-height:
 .opt .tag{max-width:220px}
 .opt .ibtn{width:30px;height:30px;opacity:.6}
 .hdl{width:22px;height:30px;display:grid;place-items:center;color:var(--faint);cursor:grab;touch-action:none;flex:none;margin-left:-4px}
-.lifting{background:var(--cell);border-radius:8px;box-shadow:var(--shadow);z-index:2}
+.lifting{background:var(--cell);border-radius:8px;box-shadow:var(--shadow);z-index:5;position:relative;transition:box-shadow .2s}
+body.is-sorting,body.is-sorting *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing!important}
+[data-key]{-webkit-touch-callout:none}
 .swl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px}
 .sw{display:flex;align-items:center;gap:8px;height:36px;padding:0 8px;border-radius:7px;font-size:13px;min-width:0}
-.sw:hover{background:var(--hover)}
 .sw i{width:20px;height:20px;border-radius:6px;background:var(--tbg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fg) 12%,transparent);flex:none}
 .sw.on{box-shadow:inset 0 0 0 2px var(--accent)}
 .cust input[type="color"]{width:44px;height:28px;border:0;border-radius:7px;padding:0;background:none;cursor:pointer}
@@ -71,7 +74,9 @@ textarea.fld{height:auto;min-height:110px;padding:8px 0;resize:none;line-height:
 .qd{display:flex;gap:6px;flex-wrap:wrap;padding-block:6px}
 .qd button{height:30px;padding:0 12px;border-radius:15px;background:var(--seg-bg);font-size:13px;color:var(--fg)}
 .lst{--row-bg:var(--surface)}
+.sw:active{background:var(--hover)}
 @media (hover:hover){
+  .sw:hover{background:var(--hover)}
   button.cell:hover,.cell[role="button"]:hover,label.cell:hover,a.cell:hover{background:var(--hover)}
 }
 @media (max-width:640px){
@@ -82,7 +87,8 @@ textarea.fld{height:auto;min-height:110px;padding:8px 0;resize:none;line-height:
   .mhead{padding:16px 12px 6px;min-height:58px;touch-action:none}
   .mhead .mt{font-size:17px;max-width:52vw}
   .mback,.mdone{font-size:17px;height:40px}
-  .mc{padding:6px 16px 16px}
+  .mc{padding:6px 16px 0}
+  .mc::after{height:32px}
   .grp{background:var(--cell);border-radius:12px;overflow:hidden}
   .grp + .grp{margin-top:22px;padding-top:0;border-top:0}
   .grp-h{font-size:13px;padding:24px 16px 7px;letter-spacing:0}

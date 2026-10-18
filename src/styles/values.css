@@ -23,6 +23,8 @@
 .blank b{color:var(--fg);font-weight:500;font-size:15px}
 .btn{height:34px;padding:0 14px;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-weight:500}
 .list{display:flex;flex-direction:column}
+.more-btn{display:flex;align-items:center;gap:8px;width:100%;min-height:40px;padding:0 12px;color:var(--accent);font-weight:500;font-size:13.5px;text-align:left}
+.more-btn span{color:var(--muted);font-weight:400;font-size:12px;font-variant-numeric:tabular-nums}
 .empty{color:var(--muted);padding:18px 4px;font-size:13px}
 @media (max-width:640px){
   .tag{font-size:13.5px;height:22px;line-height:22px}

@@ -32,7 +32,8 @@ function setScope(sc){
   const v = V(); if (v.type !== 'calendar' || !SCOPES.some(x => x.v === sc)) return;
   v.scope = sc; saveViews();
   const s = parseKey(S.sel); S.month = new Date(s.getFullYear(), s.getMonth(), 1);
-  scrollToMorning = sc !== 'month'; render();
+  scrollToMorning = sc !== 'month'; if (sc === 'month') $('#view').scrollTo(0, 0);
+  render();
 }
 function renderCalendar(v, list){
   const dp = P(v.dateProp);
@@ -51,7 +52,7 @@ function renderCalendar(v, list){
       <button class="ibtn" data-act="calnav" data-d="1" aria-label="Next">${IC.right}</button>
       <span class="spacer"></span>
       <div class="seg" role="group" aria-label="Range">${SCOPES.map(x => `<button data-act="scope" data-v="${x.v}" aria-pressed="${scopeOf(v) === x.v}">${x.l}</button>`).join('')}</div>
-      <button class="pillbtn" data-act="undated" data-drop="date:">${IC.inbox}No date <span class="n">${undated}</span></button></div>`;
+      <button class="pillbtn" data-act="undated" data-drop="date:" aria-label="Pages without a date">${IC.inbox}<span class="lbl">No date</span> <span class="n">${undated}</span></button></div>`;
   return `<div class="cal">${head}${scopeOf(v) === 'month' ? renderMonth(byDay, ctx) : renderTimeGrid(v, byDay, ctx)}</div>`;
 }
 const calOrd = dp => (a, b) => { const x = (getV(a, dp).t || '99'), y = (getV(b, dp).t || '99'); return x < y ? -1 : x > y ? 1 : (a.order ?? a.created) - (b.order ?? b.created); };
@@ -67,12 +68,14 @@ function renderMonth(byDay, ctx){
   const lead = (new Date(y, mo, 1).getDay() - WS() + 7) % 7, days = new Date(y, mo + 1, 0).getDate();
   const weeks = Math.ceil((lead + days) / 7), today = todayKey(), ord = calOrd(ctx.dp);
   let cells = '';
+  // a busy day shows its first entries and "+N more" (opens the day), like Apple Calendar; phones show up to 4 dots
+  const cap = narrow() ? 4 : 3;
   for (let i = 0; i < weeks * 7; i++) {
     const d = new Date(y, mo, 1 - lead + i), k = keyOf(d);
-    const items = (byDay.get(k) || []).sort(ord);
+    const all = (byDay.get(k) || []).sort(ord), items = all.length > cap + 1 ? all.slice(0, cap) : all, more = all.length - items.length;
     cells += `<div class="day${d.getMonth() !== mo ? ' out' : ''}${k === today ? ' today' : ''}${k === S.sel ? ' sel' : ''}" data-drop="date:${k}" data-day="${k}">
       <div class="day-h"><button class="day-add" data-act="new" data-date="${k}" aria-label="Add on ${k}">${IC.plus}</button><span class="num">${d.getDate()}</span></div>
-      <div class="day-items">${items.map(t => evHtml(t, ctx)).join('')}</div></div>`;
+      <div class="day-items">${items.map(t => evHtml(t, ctx)).join('')}${more ? `<button class="more-ev" data-act="dayview" data-day="${k}">+${more}<span> more</span></button>` : ''}</div></div>`;
   }
   const selItems = (byDay.get(S.sel) || []).sort(ord);
   const dn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], ws = WS();
@@ -92,21 +95,36 @@ function layoutLanes(items){
   if (cluster.length) flush();
   return out;
 }
+// all-day area: collapsible (v.allDay.open) and resizable by its bottom edge (v.allDay.h px); on a phone week the entries are colored lines
+const AD_H = 104;
+const adState = v => ({open:true, h:AD_H, ...(v.allDay || {})});
 function renderTimeGrid(v, byDay, ctx){
   const {start, n} = calRange(v), HH = hh(), today = todayKey(), ord = calOrd(ctx.dp);
+  const lines = narrow() && n === 7, ad = adState(v);
   const days = Array.from({length:n}, (_, i) => addDays(start, i));
   const now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes();
-  const dh = days.map(k => { const d = parseKey(k); return `<div class="tg-dh${k === today ? ' today' : ''}" data-act="dayview" data-day="${k}">${d.toLocaleDateString('en-US', {weekday:'short'})}<b>${d.getDate()}</b></div>`; }).join('');
-  const all = days.map(k => `<div class="tg-allc" data-drop="allday:${k}" data-day="${k}">${(byDay.get(k) || []).filter(t => { const d = getV(t, ctx.dp); return !(d.t && sameDay(d)); }).sort(ord).map(t => evHtml(t, ctx)).join('')}</div>`).join('');
+  const dh = days.map(k => { const d = parseKey(k); return `<div class="tg-dh${k === today ? ' today' : ''}" data-act="dayview" data-day="${k}">${fmt('wds', {weekday:'short'}).format(d)}<b>${d.getDate()}</b></div>`; }).join('');
+  const allOf = days.map(k => (byDay.get(k) || []).filter(t => { const d = getV(t, ctx.dp); return !(d.t && sameDay(d)); }).sort(ord));
+  const total = allOf.reduce((s, l) => s + l.length, 0), open = ad.open || !total;
+  const all = days.map((k, i) => {
+    const l = allOf[i];
+    const inner = !open ? (l.length ? `<button class="ad-n" data-act="adtoggle">${l.length}</button>` : '')
+      : l.map(t => lines ? `<div class="adl c-${rowColor(t) || 'none'}${isDone(t) ? ' done' : ''}" data-id="${t.id}"></div>` : evHtml(t, ctx)).join('');
+    return `<div class="tg-allc" data-drop="allday:${k}" data-day="${k}">${inner}</div>`;
+  }).join('');
+  const gut = total ? `<button class="ad-tg" data-act="adtoggle" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} all-day events">all-day${IC.chevD}</button>` : '<span class="ad-tg">all-day</span>';
   let hours = ''; for (let i = 1; i < 24; i++) hours += `<span style="top:${i * HH}px">${ST().time24 !== false ? pad(i) + ':00' : (i % 12 || 12) + (i < 12 ? ' AM' : ' PM')}</span>`;
   const cols = days.map(k => {
     const timed = (byDay.get(k) || []).filter(t => { const d = getV(t, ctx.dp); return d.t && sameDay(d); }).map(t => { const d = getV(t, ctx.dp), s = toMin(d.t); return {t, d, s, e:s + Math.max(durOf(d), 20)}; });
     return `<div class="tg-col${k === today ? ' today' : ''}" data-drop="slot:${k}" data-day="${k}">${layoutLanes(timed).map(x => tevHtml(x, HH)).join('')}${k === today ? `<div class="nowline" style="top:${nowMin / 60 * HH}px"></div>` : ''}</div>`;
   }).join('');
-  return `<div class="tg" style="--n:${n};--hh:${HH}px">
-    <div class="tg-top"><div class="tg-row"><div class="gut"></div>${dh}</div><div class="tg-row tg-all"><div class="gut">all-day</div>${all}</div></div>
+  return `<div class="tg${lines ? ' lines' : ''}" style="--n:${n};--hh:${HH}px">
+    <div class="tg-top"><div class="tg-row"><div class="gut"></div>${dh}</div>
+      <div class="tg-allw${open ? '' : ' shut'}" style="--adh:${ad.h}px"><div class="tg-row tg-all"><div class="gut">${gut}</div>${all}</div></div>
+      ${open && total ? '<div class="ad-rs" data-adrs title="Drag to resize"><i></i></div>' : ''}</div>
     <div class="tg-row tg-body"><div class="gut">${hours}</div>${cols}</div></div>`;
 }
+function toggleAllDay(){ const v = V(), ad = adState(v); v.allDay = {...ad, open:!ad.open}; saveViews(); render(); }
 function tevHtml(x, HH){
   const t = x.t, c = rowColor(t) || 'none';
   const top = x.s / 60 * HH, hgt = Math.max((x.e - x.s) / 60 * HH - 2, 18);

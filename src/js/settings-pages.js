@@ -6,7 +6,7 @@ function propsVisPage(){
     c.innerHTML = `<div class="grp-h">Shown in “${h(v.name)}”</div><div class="grp" id="pv-list">${viewProps(v).map(p => {
         const fixed = p.type === 'title' || p.id === fixedId, on = fixed || !isHidden(v, p.id);
         return `<div class="cell${on ? '' : ' off'}" data-key="${p.id}"${fixed ? '' : ` data-eye="${p.id}" role="switch" aria-checked="${on}"`}><span class="hdl">${IC.grip}</span>${TI[p.type] || ''}<span class="cl">${h(p.name)}</span><span class="cv">${fixed ? (p.type === 'title' ? 'Always' : v.type === 'calendar' ? 'Calendar by' : 'Grouped by') : `<span class="tgl${on ? ' on' : ''}"></span>`}</span></div>`;
-      }).join('')}</div><div class="grp-f">Turned-on properties are the ${where}. Drag the grip to reorder.</div>`
+      }).join('')}</div><div class="grp-f">Turned-on properties are the ${where}. Hold a row and slide to reorder this view.</div>`
       + grp(linkCell('id="pv-new"', 'New property', '', icb(IC.plus, IC_COL.blue)));
     const list = c.querySelector('#pv-list');
     sortable(list, keys => { V().cols = keys; saveViews(); render(); });
@@ -23,19 +23,23 @@ function groupsPage(){
   return {title:'Groups', render(c){
     const v = V(), gp = P(v.groupBy);
     if (!isGroupProp(gp)) { c.innerHTML = `<div class="grp-f">Choose a Select or Status property under “Group by” first.</div>`; return; }
-    const hid = new Set(v.hiddenGroups || []);
-    c.innerHTML = `<div class="grp-h">${h(gp.name)}</div><div class="grp"><div id="gr-list">${(gp.options || []).map(o => `<div class="cell${hid.has(o.id) ? ' off' : ''}" data-key="${o.id}"><span class="hdl">${IC.grip}</span><span class="cl" data-open="${o.id}" role="button"><span class="tag${gp.type === 'status' ? ' st' : ''} c-${o.color}">${h(o.name)}</span></span><span class="cv"><button class="tgl${hid.has(o.id) ? '' : ' on'}" data-vis="${o.id}" role="switch" aria-checked="${!hid.has(o.id)}" aria-label="Show ${h(o.name)}"></button></span></div>`).join('')}</div>${fldCell('gr-new', '', 'Add a group')}</div>
-      <div class="grp-f">Hold the grip and slide to reorder. Tap a group to rename it or change its color. You can also hold a column header on the board and slide it.</div>`
-      + grp(tglCell('hideEmpty', 'Hide empty groups', !!v.hideEmpty) + tglCell('showNone', `Show “No ${h(gp.name)}”`, v.showNone !== false));
-    sortable(c.querySelector('#gr-list'), keys => { const x = P(V().groupBy); const rest = x.options.filter(o => !keys.includes(o.id)); x.options = keys.map(k => opt(x, k)).filter(Boolean).concat(rest); saveSchema(); render(); });
+    const hid = new Set(v.hiddenGroups || []), noneOn = v.showNone !== false;
+    const row = (key, label, on, open) => `<div class="cell${on ? '' : ' off'}" data-key="${key}"><span class="hdl">${IC.grip}</span><span class="cl"${open ? ` data-open="${key}" role="button"` : ''}>${label}</span><span class="cv"><button class="tgl${on ? ' on' : ''}" data-vis="${key}" role="switch" aria-checked="${on}" aria-label="Show group"></button></span></div>`;
+    const rows = (gp.options || []).map(o => row(o.id, `<span class="tag${gp.type === 'status' ? ' st' : ''} c-${o.color}">${h(o.name)}</span>`, !hid.has(o.id), true));
+    rows.splice(Math.min(v.nonePos || 0, rows.length), 0, row('', `<span class="tag c-none">No ${h(gp.name)}</span>`, noneOn, false));
+    c.innerHTML = `<div class="grp-h">${h(gp.name)}</div><div class="grp"><div id="gr-list">${rows.join('')}</div>${fldCell('gr-new', '', 'Add a group')}</div>
+      <div class="grp-f">Hold a group and slide to reorder. Tap a group to rename it or change its color. On the board you can also hold a column header and slide it.</div>`
+      + grp(tglCell('hideEmpty', 'Hide empty groups', !!v.hideEmpty));
+    sortable(c.querySelector('#gr-list'), keys => { const cv = V(); setGroupOrder(cv, P(cv.groupBy), keys); });
     c.querySelector('#gr-list').addEventListener('click', e => {
       const t = e.target.closest('[data-vis]');
+      if (t && !t.dataset.vis) { const cv = V(), on = cv.showNone === false; cv.showNone = on; t.classList.toggle('on', on); t.closest('.cell').classList.toggle('off', !on); saveViews(); render(); return; }
       if (t) { const cv = V(), s = new Set(cv.hiddenGroups || []), id = t.dataset.vis; s.has(id) ? s.delete(id) : s.add(id); cv.hiddenGroups = [...s]; t.classList.toggle('on', !s.has(id)); t.closest('.cell').classList.toggle('off', s.has(id)); saveViews(); render(); return; }
       const o = e.target.closest('[data-open]'); if (o) pushMenu(optionPage(V().groupBy, o.dataset.open));
     });
     const ni = c.querySelector('#gr-new');
     ni.addEventListener('keydown', e => { if (e.key !== 'Enter' || !ni.value.trim()) return; e.preventDefault(); addOption(P(V().groupBy), ni.value.trim()); render(); redrawMenu(); const n2 = $('#gr-new'); if (n2) n2.focus(); });
-    bindControls(c, {tg:{hideEmpty:on => { V().hideEmpty = on; saveViews(); render(); }, showNone:on => { V().showNone = on; saveViews(); render(); }}});
+    bindControls(c, {tg:{hideEmpty:on => { V().hideEmpty = on; saveViews(); render(); }}});
   }};
 }
 function settingsPage(){
@@ -59,7 +63,8 @@ function settingsPage(){
     if (v.type === 'table') {
       html += grp(tglCell('wrap', 'Wrap cell text', v.wrap !== false, icb(TI.text, IC_COL.gray)) + segCell('density', [['compact', 'Compact'], ['regular', 'Regular'], ['tall', 'Tall']], v.density || 'regular'), 'Table');
     }
-    html += grp(linkCell('data-go="props"', 'Properties', `${shownN} shown`, icb(TI.multi_select, IC_COL.blue))
+    html += grp(tglCell('showDone', 'Show completed', v.showDone !== false, icb(IC.check, IC_COL.gray))
+      + linkCell('data-go="props"', 'Properties', `${shownN} shown`, icb(TI.multi_select, IC_COL.blue))
       + linkCell('data-go="filters"', 'Filter', String((v.filters || []).filter(ruleReady).length || ''), icb(IC.filter, IC_COL.orange))
       + linkCell('data-go="sorts"', 'Sort', String((v.sorts || []).length || ''), icb(IC.sort, IC_COL.green))
       + linkCell('data-go="colors"', 'Conditional color', String((S.schema.colorRules || []).length || ''), icb(IC.palette, IC_COL.purple)), 'This view');
@@ -74,7 +79,7 @@ function settingsPage(){
     bindControls(c, {
       seg:{layout:t => { setLayout(V(), t); redrawMenu(); }, scope:s => setScope(s), density:d => { V().density = d; saveViews(); render(); }},
       sel:{groupBy:val => { V().groupBy = val; saveViews(); render(); redrawMenu(); }, dateProp:val => { V().dateProp = val; saveViews(); render(); }},
-      tg:{showCheck:on => { V().showCheck = on; saveViews(); render(); }, wrap:on => { V().wrap = on; saveViews(); render(); }},
+      tg:{showCheck:on => { V().showCheck = on; saveViews(); render(); }, wrap:on => { V().wrap = on; saveViews(); render(); }, showDone:on => { V().showDone = on; saveViews(); render(); }},
     });
     c.addEventListener('click', e => {
       const g = e.target.closest('[data-go]');
@@ -95,17 +100,30 @@ function generalPage(){
     c.innerHTML = grp(fldCell('g-title', st.title, 'Database name'), 'Database name')
       + grp(segCell('theme', [['system', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']], st.theme), 'Appearance')
       + grp(tglCell('time24', '24-hour time', st.time24 !== false, icb(IC.clock, IC_COL.orange))
-        + selCell('ws', 'Week starts on', [['1', 'Monday'], ['0', 'Sunday'], ['6', 'Saturday']], String(st.weekStart ?? 1), icb(IC.calendar, IC_COL.red)), 'Date & time');
+        + selCell('ws', 'Week starts on', [['1', 'Monday'], ['0', 'Sunday'], ['6', 'Saturday']], String(st.weekStart ?? 1), icb(IC.calendar, IC_COL.red)), 'Date & time')
+      + sampleGroup();
     const ti = c.querySelector('#g-title');
     ti.addEventListener('input', () => setST('title', ti.value));
     ti.addEventListener('keydown', e => { if (e.key === 'Enter') ti.blur(); });
     bindControls(c, {seg:{theme:t => setST('theme', t)}, tg:{time24:on => setST('time24', on)}, sel:{ws:val => setST('weekStart', +val)}});
+    let confirm = false;
+    c.addEventListener('click', e => {
+      if (e.target.closest('#sd-add')) { addSamples(); return redrawMenu(); }
+      const rm = e.target.closest('#sd-rm'); if (!rm) return;
+      if (!confirm) { confirm = true; rm.querySelector('.cl').textContent = 'Tap again to remove them'; return; }
+      removeSamples(); redrawMenu();
+    });
   }};
+}
+function sampleGroup(){
+  const n = [...S.tasks.values()].filter(isSample).length;
+  return grp(n ? actCell('id="sd-rm"', `Remove ${n} sample pages`, IC.trash, 'danger') : actCell('id="sd-add"', 'Add sample pages', IC.plus, 'accent'), 'Sample data',
+    n ? 'Sample pages are marked, so this removes only them. Your own pages stay.' : 'Adds about 700 realistic pages around today to try views, search and speed with a full database. Remove them here in one tap.');
 }
 function viewsPage(){
   return {title:'Views', render(c){
     c.innerHTML = `<div class="grp-h">Views</div><div class="grp" id="vw-list">${S.views.map(x => `<div class="cell" data-key="${x.id}" role="button"><span class="hdl">${IC.grip}</span>${layoutIcon(x.type)}<span class="cl">${h(x.name)}</span>${x.id === S.vid ? `<span class="ck">${IC.check}</span>` : ''}${chev}</div>`).join('')}</div>
-      <div class="grp-f">Hold the grip and slide to reorder the view tabs. Tap a view to open its settings.</div>`
+      <div class="grp-f">Hold a view and slide to reorder the tabs. Tap a view to open its settings.</div>`
       + grp(actCell('id="vw-add"', 'Add view', IC.plus, 'accent'));
     sortable(c.querySelector('#vw-list'), keys => { S.views = keys.map(k => S.views.find(x => x.id === k)).filter(Boolean); saveViews(); renderBar(); });
     c.querySelector('#vw-list').addEventListener('click', e => {
@@ -119,9 +137,9 @@ function viewsPage(){
 function allPropsPage(){
   return {title:'All properties', render(c){
     c.innerHTML = `<div class="grp-h">Properties</div><div class="grp" id="ap-list">${S.schema.props.map(p => `<div class="cell" data-key="${p.id}" role="button"><span class="hdl">${IC.grip}</span>${TI[p.type] || ''}<span class="cl">${h(p.name)}</span><span class="cv">${h(typeLabel(p.type))}${chev}</span></div>`).join('')}</div>
-      <div class="grp-f">This order is used on each page. Tap a property to rename it, change its type or edit its options.</div>`
+      <div class="grp-f">Hold a property and slide to reorder it in every view: table columns, cards and pages. Tap a property to rename it, change its type or edit its options.</div>`
       + grp(actCell('id="ap-add"', 'New property', IC.plus, 'accent'));
-    sortable(c.querySelector('#ap-list'), keys => { S.schema.props = keys.map(k => P(k)).filter(Boolean); saveSchema(); render(); });
+    sortable(c.querySelector('#ap-list'), keys => { S.schema.props = keys.map(k => P(k)).filter(Boolean); S.views.forEach(v => { v.cols = keys.slice(); }); saveSchema(); saveViews(); render(); });
     c.querySelector('#ap-list').addEventListener('click', e => { const r = e.target.closest('[data-key]'); if (r && !e.target.closest('.hdl')) pushMenu(propPage(r.dataset.key, {inView:false})); });
     c.querySelector('#ap-add').addEventListener('click', () => pushMenu(newPropPage()));
   }};
@@ -142,7 +160,7 @@ function addViewPage(){
       const b = e.target.closest('[data-l]'); if (!b) return;
       const type = b.dataset.l, label = LAYOUTS.find(l => l[0] === type)[1];
       let name = label, i = 2; while (S.views.some(v => v.name === name)) name = label + ' ' + i++;
-      const v = {id:newId(), name, type, cols:S.schema.props.map(p => p.id), hidden:type === 'table' ? [] : S.schema.props.filter(p => p.type === 'created_time' || p.type === 'last_edited_time').map(p => p.id), widths:{}, filters:[], sorts:[], scope:'month', groupBy:type === 'list' ? '' : undefined};
+      const v = {id:newId(), name, type, cols:S.schema.props.map(p => p.id), hidden:type === 'table' ? [] : S.schema.props.filter(p => p.type === 'created_time' || p.type === 'last_edited_time').map(p => p.id), widths:{}, filters:[], sorts:[], scope:'month', groupBy:type === 'list' ? '' : undefined, showDone:type !== 'list'};
       S.views.push(v); S.vid = v.id; setLayout(v, type);
       dismissMenu();
       requestAnimationFrame(() => { const tab = document.querySelector(`.vtab[data-v="${v.id}"]`); if (tab) tab.scrollIntoView({inline:'nearest', block:'nearest'}); });

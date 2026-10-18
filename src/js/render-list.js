@@ -2,13 +2,13 @@
 function renderList(v, list){
   const gp = P(v.groupBy), grouped = isGroupProp(gp);
   const ctx = {shown:shownProps(v).filter(p => p.type !== 'title' && !(grouped && p.id === gp.id)), check:v.showCheck !== false};
-  const sec = (o, items, gid) => `<section class="lv-sec" data-drop="grp:${gid}">
+  const sec = (o, items, gid, page = pageOf(v, gid, items)) => `<section class="lv-sec" data-drop="grp:${gid}">
     ${grouped ? `<div class="lv-h">${o ? tagO(o, gp.type === 'status') : `<span class="tag c-none">No ${h(gp.name)}</span>`}<span class="count">${items.length}</span></div>` : ''}
-    <div class="lv-g">${items.map(t => rowHtml(t, ctx)).join('') || '<div class="empty lv-empty">No pages</div>'}</div>
+    <div class="lv-g">${page.map(t => rowHtml(t, ctx)).join('') || '<div class="empty lv-empty">No pages</div>'}${moreBtn(v, gid, items.length, page.length)}</div>
     <button class="lv-add" data-act="new" data-grp="${grouped ? gid : ''}">${IC.plus}New page</button></section>`;
   if (!grouped) return `<div class="lv">${list.length ? sec(null, list, '*') : emptyState() + sec(null, [], '*')}</div>`;
-  const {groups, opts, none} = groupTasks(v, gp, list);
-  return `<div class="lv">${none ? sec(null, groups.get(''), '') : ''}${opts.map(o => sec(o, groups.get(o.id), o.id)).join('')}</div>`;
+  const {groups, order} = groupTasks(v, gp, list);
+  return `<div class="lv">${order.map(o => o ? sec(o, groups.get(o.id), o.id) : sec(null, groups.get(''), '')).join('')}</div>`;
 }
 function rowHtml(t, ctx){
   const sp = statusProp(), done = isDone(t), c = rowColor(t);

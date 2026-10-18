@@ -1,22 +1,4 @@
-// table column resize and drag & drop (cards, rows, calendar entries, board columns; mouse at once, touch after a hold)
-let rsz = null;
-document.addEventListener('pointerdown', e => {
-  const r = e.target.closest('[data-rs]'); if (!r) return;
-  e.preventDefault(); e.stopPropagation();
-  const v = V(), p = P(r.dataset.rs);
-  rsz = {v, p, x0:e.clientX, w0:colW(v, p), k:+r.dataset.k, w:colW(v, p)};
-  r.classList.add('on'); r.setPointerCapture(e.pointerId);
-  const props = shownProps(v);
-  const move = ev => { rsz.w = Math.max(70, Math.round(rsz.w0 + ev.clientX - rsz.x0)); v.widths = {...(v.widths || {}), [p.id]:rsz.w}; colCss(v, props); };
-  const up = () => {
-    r.removeEventListener('pointermove', move); r.removeEventListener('pointerup', up); r.removeEventListener('pointercancel', up);
-    r.classList.remove('on');
-    rsz.v.widths = {...(rsz.v.widths || {}), [rsz.p.id]:rsz.w}; saveViews();
-    swallowClick(); rsz = null;
-  };
-  r.addEventListener('pointermove', move); r.addEventListener('pointerup', up); r.addEventListener('pointercancel', up);
-}, true);
-
+// drag & drop: cards, list and table rows, calendar entries, board columns, table headers (mouse at once, touch after a hold)
 // ---------- drag & drop (mouse drags at once; touch uses press-and-hold) ----------
 let drag = null, raf = 0;
 document.addEventListener('pointerdown', e => {
@@ -33,6 +15,15 @@ document.addEventListener('pointerdown', e => {
   if (ch && !e.target.closest('button')) {
     const col = ch.parentElement, r = col.getBoundingClientRect();
     drag = {colDrag:true, oid:col.dataset.o, el:col, x0:e.clientX, y0:e.clientY, x:e.clientX, y:e.clientY, started:false,
+      touch:e.pointerType !== 'mouse', ox:e.clientX - r.left, oy:e.clientY - r.top, w:r.width, target:null, line:null};
+    if (drag.touch) drag.timer = setTimeout(startDrag, 360);
+    return;
+  }
+  // hold a table header and slide to move the column
+  const th = e.target.closest('.th[data-prop]');
+  if (th) {
+    const r = th.getBoundingClientRect();
+    drag = {thDrag:true, pid:th.dataset.prop, el:th, x0:e.clientX, y0:e.clientY, x:e.clientX, y:e.clientY, started:false,
       touch:e.pointerType !== 'mouse', ox:e.clientX - r.left, oy:e.clientY - r.top, w:r.width, target:null, line:null};
     if (drag.touch) drag.timer = setTimeout(startDrag, 360);
     return;
@@ -90,6 +81,7 @@ function startDrag(){
   const g = drag.el.cloneNode(true);
   g.classList.add('ghost'); g.style.width = drag.w + 'px';
   if (drag.colDrag) g.querySelectorAll('.card').forEach((c, i) => { if (i > 2) c.remove(); }); else g.style.height = drag.el.offsetHeight + 'px';
+  if (drag.el.matches('.tr')) g.style.width = Math.min(drag.w, innerWidth - 24) + 'px';
   document.body.appendChild(g); drag.ghost = g;
   drag.el.classList.add('dragging'); document.body.classList.add('is-dragging');
   try { if (navigator.vibrate) navigator.vibrate(10); } catch {}
@@ -99,6 +91,17 @@ function startDrag(){
 function moveDrag(){
   const d = drag; if (!d || !d.ghost) return;
   d.ghost.style.left = (d.x - d.ox) + 'px'; d.ghost.style.top = (d.y - d.oy) + 'px';
+  if (d.thDrag) {
+    const tbl = $('#view .tbl'); if (!tbl) return;
+    const ths = [...tbl.querySelectorAll('.tb-h > .th[data-prop]')], others = ths.filter(c => c !== d.el);
+    const before = others.find(c => { const r = c.getBoundingClientRect(); return d.x < r.left + r.width / 2; }) || null;
+    const ref = before || others[others.length - 1]; if (!ref) return;
+    const rr = ref.getBoundingClientRect(), tr = tbl.getBoundingClientRect();
+    if (!d.line) { d.line = document.createElement('div'); d.line.className = 'th-line'; tbl.appendChild(d.line); }
+    d.line.style.left = ((before ? rr.left : rr.right) - tr.left - 1) + 'px';
+    d.before = before ? before.dataset.prop : null; d.last = others.length ? others[others.length - 1].dataset.prop : null;
+    return;
+  }
   if (d.colDrag) {
     if (d.line) d.line.remove();
     const board = $('#view .board'); if (!board) return;
@@ -114,9 +117,9 @@ function moveDrag(){
   if (tgt && tgt.closest('#menu')) tgt = null;
   if (tgt !== d.target) { if (d.target) d.target.classList.remove('over'); d.target = tgt; if (tgt) tgt.classList.add('over'); }
   if (d.line) d.line.remove(); d.line = null; d.before = null; d.siblings = null;
-  if (tgt && tgt.matches('.col, .lv-sec')) {
-    const body = tgt.querySelector('.col-body, .lv-g');
-    const cards = [...body.querySelectorAll(':scope > .card, :scope > .sw-row')].filter(c => c !== d.el);
+  if (tgt && tgt.matches('.col, .lv-sec, .tbody')) {
+    const body = tgt.matches('.tbody') ? tgt : tgt.querySelector('.col-body, .lv-g');
+    const cards = [...body.querySelectorAll(':scope > .card, :scope > .sw-row, :scope > .tr')].filter(c => c !== d.el);
     const before = cards.find(c => { const r = c.getBoundingClientRect(); return d.y < r.top + r.height / 2; }) || null;
     const line = document.createElement('div'); line.className = 'drop-line';
     body.insertBefore(line, before); d.line = line; d.before = before ? before.dataset.id : null; d.siblings = cards.map(c => c.dataset.id);
@@ -136,7 +139,7 @@ function autoScroll(){
   const sp = dist => Math.ceil((m - Math.max(0, dist)) / 4);
   let moved = false;
   if (drag.x < r.left + m) { x.scrollLeft -= sp(drag.x - r.left); moved = true; } else if (drag.x > r.right - m) { x.scrollLeft += sp(r.right - drag.x); moved = true; }
-  if (!drag.colDrag) { if (drag.y < r.top + m) { y.scrollTop -= sp(drag.y - r.top); moved = true; } else if (drag.y > r.bottom - m) { y.scrollTop += sp(r.bottom - drag.y); moved = true; } }
+  if (!drag.colDrag && !drag.thDrag) { if (drag.y < r.top + m) { y.scrollTop -= sp(drag.y - r.top); moved = true; } else if (drag.y > r.bottom - m) { y.scrollTop += sp(r.bottom - drag.y); moved = true; } }
   if (moved) moveDrag();
   raf = requestAnimationFrame(autoScroll);
 }
@@ -162,12 +165,18 @@ function endDrag(){
   const fromMenu = !!d.el.closest('#menu');
   cleanupDrag();
   if (fromMenu) closeMenu();
+  if (d.thDrag) {
+    const ids = viewProps(v).map(p => p.id).filter(x => x !== d.pid);
+    const at = d.before ? ids.indexOf(d.before) : d.last ? ids.indexOf(d.last) + 1 : ids.length;
+    ids.splice(at < 0 ? ids.length : at, 0, d.pid);
+    if (ids.join() !== viewProps(v).map(p => p.id).join()) { v.cols = ids; saveViews(); render(); }
+    return;
+  }
   if (d.colDrag) {
     const gp = P(v.groupBy); if (!gp || !d.order) return;
-    const ids = d.order.slice(), i = d.before ? ids.indexOf(d.before) : ids.length;
+    const ids = d.order.slice(), i = d.before != null ? ids.indexOf(d.before) : ids.length;
     ids.splice(i, 0, d.oid);
-    gp.options = ids.map(x => opt(gp, x)).filter(Boolean).concat(gp.options.filter(o => !ids.includes(o.id)));
-    saveSchema(); render();
+    setGroupOrder(v, gp, ids);
     return;
   }
   if (!tgt || !t) return;
@@ -181,8 +190,13 @@ function endDrag(){
     const order = prev == null && next == null ? Date.now() : prev == null ? next - 1024 : next == null ? prev + 1024 : (prev + next) / 2;
     const np = {...(t.p || {})};
     if (val !== '*') { if (val) np[gp.id] = val; else delete np[gp.id]; }
+    // a sorted view cannot show a hand-made order: turn the sort off (Undo brings it back)
+    const sorts = (v.sorts || []).length && d.siblings && d.siblings.length ? v.sorts : null;
+    if (sorts) { v.sorts = []; saveViews(); }
     const old = update(id, {p:np, order});
-    if (val !== '*' && (getV(old, gp) || '') !== val) toast(`Moved to ${opt(gp, val)?.name || 'No ' + gp.name}`, () => restore(old));
+    const undo = () => { restore(old); if (sorts) { v.sorts = sorts; saveViews(); render(); } };
+    if (val !== '*' && (getV(old, gp) || '') !== val) toast(`Moved to ${opt(gp, val)?.name || 'No ' + gp.name}${sorts ? ', sorting off' : ''}`, undo);
+    else if (sorts) toast('Sorting turned off to keep your order', undo);
     return;
   }
   const dp = P(v.dateProp); if (!dp) return;

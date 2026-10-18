@@ -10,6 +10,7 @@ function sheetGestures(panel, {scroller, onClose, back}){
   }, {passive:true});
   panel.addEventListener('touchmove', e => {
     if (!g) return;
+    if (sorting && sorting.lifted) { g = null; return; }
     const t = e.touches[0]; g.dx = t.clientX - g.x0; g.dy = t.clientY - g.y0;
     if (!g.mode) {
       if (Math.abs(g.dx) < 8 && Math.abs(g.dy) < 8) return;

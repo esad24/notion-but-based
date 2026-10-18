@@ -9,10 +9,10 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-act]'), act = a && a.dataset.act, v = V();
   if (act === 'tab') {
     if (a.dataset.v === S.vid) return openMenu(a, settingsPage());
-    a.scrollIntoView({inline:'nearest', block:'nearest', behavior:'smooth'});
     S.vid = a.dataset.v; const nv = V(); scrollToMorning = nv.type === 'calendar' && scopeOf(nv) !== 'month';
     $('#view').scrollTo(0, 0); resetX = true; try { localStorage.setItem(VID_KEY, S.vid); } catch {}
-    return renderNow();
+    renderNow(); a.scrollIntoView({inline:'nearest', block:'nearest', behavior:'smooth'});
+    return;
   }
   if (act === 'addview') return openMenu(a, addViewPage());
   if (act === 'settings') return openMenu(a, settingsPage());
@@ -41,6 +41,8 @@ document.addEventListener('click', e => {
   if (act === 'scope') return setScope(a.dataset.v);
   if (act === 'dayview') { S.sel = a.dataset.day; return setScope('day'); }
   if (act === 'undated') return openMenu(a, trayPage());
+  if (act === 'adtoggle') return toggleAllDay();
+  if (act === 'more') return showMore(a.dataset.k);
   const item = e.target.closest('[data-id]');
   if (item && item.matches('.card,.ev,.sw-row,.tev') && !(item.matches('.grid .ev') && narrow())) return openSheet(item.dataset.id);
   if (v.type !== 'calendar') return;
@@ -50,6 +52,8 @@ document.addEventListener('click', e => {
     return createTask({[v.dateProp]:{d:col.dataset.day, t:fromMin(m), ed:col.dataset.day, e:fromMin(Math.min(m + 60, 1439))}});
   }
   const allc = e.target.closest('.tg-allc');
+  // the phone week shows all-day entries as thin lines: a tap opens that day instead
+  if (allc && allc.closest('.lines') && allc.children.length) { S.sel = allc.dataset.day; return setScope('day'); }
   if (allc) return createTask({[v.dateProp]:{d:allc.dataset.day, t:'', e:''}});
   const day = e.target.closest('.day');
   if (day && e.target.closest('.num') && !narrow()) { S.sel = day.dataset.day; return setScope('day'); }
