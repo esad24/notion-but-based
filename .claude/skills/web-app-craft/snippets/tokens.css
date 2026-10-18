@@ -1,0 +1,43 @@
+/* Light/dark token system (colors, system font stack, iOS grouped-list tokens). Dark values appear twice on purpose: prefers-color-scheme + [data-theme=dark]. */
+:root{
+  --bg:#fbfbfa; --surface:#ffffff; --surface-2:#f4f4f2; --hover:rgba(55,53,47,.065); --line:#e8e7e3;
+  --fg:#2b2a26; --muted:#7d7b74; --faint:#a9a79f; --accent:#2383e2; --accent-fg:#ffffff; --danger:#d1453f;
+  --shadow:0 10px 32px rgba(15,15,15,.14),0 0 0 1px rgba(15,15,15,.06); --scrim:rgba(15,15,15,.3);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Geist",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"Geist Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --gray-bg:#ebebe9; --gray-fg:#4b4a46; --brown-bg:#efe2d8; --brown-fg:#6b4a33; --orange-bg:#fbe3cd; --orange-fg:#8a4512;
+  --yellow-bg:#f8edc2; --yellow-fg:#755a08; --green-bg:#dbeee0; --green-fg:#25663a; --blue-bg:#d8e7f8; --blue-fg:#1d538f;
+  --purple-bg:#e7dff6; --purple-fg:#5a3a94; --pink-bg:#f7dbe8; --pink-fg:#8c2c5b; --red-bg:#f9dcdb; --red-fg:#972d2d;
+  --teal-bg:#d3efec; --teal-fg:#1f625c; --cyan-bg:#d4eef6; --cyan-fg:#19607a; --indigo-bg:#dfe1f8; --indigo-fg:#3b3f95; --lime-bg:#e6f2cf; --lime-fg:#4b6214; --fuchsia-bg:#f5dcf5; --fuchsia-fg:#85298a; --slate-bg:#e1e5ea; --slate-fg:#3d4652;
+  --grouped:#f2f2f7; --cell:#ffffff; --sep:rgba(60,60,67,.2); --seg-bg:rgba(118,118,128,.12); --seg-bg-strong:rgba(120,120,128,.2); --green-sw:#34c759;
+  --kb:0px; --safe-b:0px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#191919; --surface:#222222; --surface-2:#262626; --hover:rgba(255,255,255,.06); --line:#2f2f2f;
+  --fg:#e7e6e3; --muted:#9b9a96; --faint:#6c6b68; --accent:#2383e2; --accent-fg:#ffffff; --danger:#eb5d57;
+  --shadow:0 12px 36px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.09); --scrim:rgba(0,0,0,.55);
+  --gray-bg:#3b3b3b; --gray-fg:#d6d5d2; --brown-bg:#4b3a2e; --brown-fg:#e6cbb4; --orange-bg:#5e3a1c; --orange-fg:#f6bb8a;
+  --yellow-bg:#55491d; --yellow-fg:#f1d888; --green-bg:#24432f; --green-fg:#9fdbb1; --blue-bg:#1e3a5d; --blue-fg:#9cc6f6;
+  --purple-bg:#3f305b; --purple-fg:#cbb4f3; --pink-bg:#572a41; --pink-fg:#f3aaca; --red-bg:#5c2727; --red-fg:#f6a5a3;
+  --teal-bg:#1f4542; --teal-fg:#8fdcd2; --cyan-bg:#1c4150; --cyan-fg:#93d6ee; --indigo-bg:#2e3160; --indigo-fg:#b4b8f5; --lime-bg:#3a4520; --lime-fg:#c6e48e; --fuchsia-bg:#522a55; --fuchsia-fg:#eeaaf0; --slate-bg:#343a42; --slate-fg:#c5ccd6;
+  --grouped:#1c1c1e; --cell:#2c2c2e; --sep:rgba(84,84,88,.6); --seg-bg:rgba(118,118,128,.24); --seg-bg-strong:rgba(120,120,128,.36); --green-sw:#30d158;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#191919; --surface:#222222; --surface-2:#262626; --hover:rgba(255,255,255,.06); --line:#2f2f2f;
+  --fg:#e7e6e3; --muted:#9b9a96; --faint:#6c6b68; --accent:#2383e2; --accent-fg:#ffffff; --danger:#eb5d57;
+  --shadow:0 12px 36px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.09); --scrim:rgba(0,0,0,.55);
+  --gray-bg:#3b3b3b; --gray-fg:#d6d5d2; --brown-bg:#4b3a2e; --brown-fg:#e6cbb4; --orange-bg:#5e3a1c; --orange-fg:#f6bb8a;
+  --yellow-bg:#55491d; --yellow-fg:#f1d888; --green-bg:#24432f; --green-fg:#9fdbb1; --blue-bg:#1e3a5d; --blue-fg:#9cc6f6;
+  --purple-bg:#3f305b; --purple-fg:#cbb4f3; --pink-bg:#572a41; --pink-fg:#f3aaca; --red-bg:#5c2727; --red-fg:#f6a5a3;
+  --teal-bg:#1f4542; --teal-fg:#8fdcd2; --cyan-bg:#1c4150; --cyan-fg:#93d6ee; --indigo-bg:#2e3160; --indigo-fg:#b4b8f5; --lime-bg:#3a4520; --lime-fg:#c6e48e; --fuchsia-bg:#522a55; --fuchsia-fg:#eeaaf0; --slate-bg:#343a42; --slate-fg:#c5ccd6;
+  --grouped:#1c1c1e; --cell:#2c2c2e; --sep:rgba(84,84,88,.6); --seg-bg:rgba(118,118,128,.24); --seg-bg-strong:rgba(120,120,128,.36); --green-sw:#30d158;
+  color-scheme:dark;
+}
+.c-gray{--tbg:var(--gray-bg);--tfg:var(--gray-fg)} .c-brown{--tbg:var(--brown-bg);--tfg:var(--brown-fg)}
+.c-orange{--tbg:var(--orange-bg);--tfg:var(--orange-fg)} .c-yellow{--tbg:var(--yellow-bg);--tfg:var(--yellow-fg)}
+.c-green{--tbg:var(--green-bg);--tfg:var(--green-fg)} .c-blue{--tbg:var(--blue-bg);--tfg:var(--blue-fg)}
+.c-purple{--tbg:var(--purple-bg);--tfg:var(--purple-fg)} .c-pink{--tbg:var(--pink-bg);--tfg:var(--pink-fg)}
+.c-red{--tbg:var(--red-bg);--tfg:var(--red-fg)}
+.c-teal{--tbg:var(--teal-bg);--tfg:var(--teal-fg)} .c-cyan{--tbg:var(--cyan-bg);--tfg:var(--cyan-fg)} .c-indigo{--tbg:var(--indigo-bg);--tfg:var(--indigo-fg)} .c-lime{--tbg:var(--lime-bg);--tfg:var(--lime-fg)} .c-fuchsia{--tbg:var(--fuchsia-bg);--tfg:var(--fuchsia-fg)} .c-slate{--tbg:var(--slate-bg);--tfg:var(--slate-fg)} .c-none{--tbg:var(--surface-2);--tfg:var(--muted)}
+
