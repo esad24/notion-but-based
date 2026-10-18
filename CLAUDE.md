@@ -65,7 +65,8 @@ Every file starts with a one-line comment describing it (`head -1 src/js/*.js sr
 | `settings-pages.js` | `settingsPage`, `generalPage`, `viewsPage`, `allPropsPage`, `propsVisPage`, `groupsPage`, `addViewPage`, `addGroupPage`, `trayPage`, `setLayout` |
 | `toast.js` | `toast(msg, undo)` |
 | `input.js` | delegated click handler (`data-act` values), search, keyboard shortcuts, `swallowClick` |
-| `drag.js` | column resize, all-day area resize, drag & drop (cards, rows, table rows, table headers, board columns) |
+| `resize.js` | table column resize, all-day area resize (`rsz`) |
+| `drag.js` | drag & drop: cards, list and table rows, table headers, board columns, calendar entries |
 | `boot.js` | startup |
 
 ### `src/styles/` (cascade order)
