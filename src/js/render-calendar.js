@@ -52,7 +52,7 @@ function renderCalendar(v, list){
       <button class="ibtn" data-act="calnav" data-d="1" aria-label="Next">${IC.right}</button>
       <span class="spacer"></span>
       <div class="seg" role="group" aria-label="Range">${SCOPES.map(x => `<button data-act="scope" data-v="${x.v}" aria-pressed="${scopeOf(v) === x.v}">${x.l}</button>`).join('')}</div>
-      <button class="pillbtn" data-act="undated" data-drop="date:">${IC.inbox}No date <span class="n">${undated}</span></button></div>`;
+      <button class="pillbtn" data-act="undated" data-drop="date:" aria-label="Pages without a date">${IC.inbox}<span class="lbl">No date</span> <span class="n">${undated}</span></button></div>`;
   return `<div class="cal">${head}${scopeOf(v) === 'month' ? renderMonth(byDay, ctx) : renderTimeGrid(v, byDay, ctx)}</div>`;
 }
 const calOrd = dp => (a, b) => { const x = (getV(a, dp).t || '99'), y = (getV(b, dp).t || '99'); return x < y ? -1 : x > y ? 1 : (a.order ?? a.created) - (b.order ?? b.created); };
@@ -112,7 +112,7 @@ function renderTimeGrid(v, byDay, ctx){
       : l.map(t => lines ? `<div class="adl c-${rowColor(t) || 'none'}${isDone(t) ? ' done' : ''}" data-id="${t.id}"></div>` : evHtml(t, ctx)).join('');
     return `<div class="tg-allc" data-drop="allday:${k}" data-day="${k}">${inner}</div>`;
   }).join('');
-  const gut = total ? `<button class="ad-tg" data-act="adtoggle" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} all-day events">all-day${IC.chevD}</button>` : 'all-day';
+  const gut = total ? `<button class="ad-tg" data-act="adtoggle" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} all-day events">all-day${IC.chevD}</button>` : '<span class="ad-tg">all-day</span>';
   let hours = ''; for (let i = 1; i < 24; i++) hours += `<span style="top:${i * HH}px">${ST().time24 !== false ? pad(i) + ':00' : (i % 12 || 12) + (i < 12 ? ' AM' : ' PM')}</span>`;
   const cols = days.map(k => {
     const timed = (byDay.get(k) || []).filter(t => { const d = getV(t, ctx.dp); return d.t && sameDay(d); }).map(t => { const d = getV(t, ctx.dp), s = toMin(d.t); return {t, d, s, e:s + Math.max(durOf(d), 20)}; });

@@ -160,7 +160,7 @@ function addViewPage(){
       const b = e.target.closest('[data-l]'); if (!b) return;
       const type = b.dataset.l, label = LAYOUTS.find(l => l[0] === type)[1];
       let name = label, i = 2; while (S.views.some(v => v.name === name)) name = label + ' ' + i++;
-      const v = {id:newId(), name, type, cols:S.schema.props.map(p => p.id), hidden:type === 'table' ? [] : S.schema.props.filter(p => p.type === 'created_time' || p.type === 'last_edited_time').map(p => p.id), widths:{}, filters:[], sorts:[], scope:'month', groupBy:type === 'list' ? '' : undefined};
+      const v = {id:newId(), name, type, cols:S.schema.props.map(p => p.id), hidden:type === 'table' ? [] : S.schema.props.filter(p => p.type === 'created_time' || p.type === 'last_edited_time').map(p => p.id), widths:{}, filters:[], sorts:[], scope:'month', groupBy:type === 'list' ? '' : undefined, showDone:type !== 'list'};
       S.views.push(v); S.vid = v.id; setLayout(v, type);
       dismissMenu();
       requestAnimationFrame(() => { const tab = document.querySelector(`.vtab[data-v="${v.id}"]`); if (tab) tab.scrollIntoView({inline:'nearest', block:'nearest'}); });

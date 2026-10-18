@@ -18,13 +18,14 @@
 .cp.full .dt{color:var(--muted)}
 .cp.full .dt.overdue{color:var(--danger)}
 .col-add{display:flex;align-items:center;gap:6px;color:var(--muted);height:32px;padding:0 6px;border-radius:6px;text-align:left}
-.col-add:hover{background:var(--hover);color:var(--fg)}
 .col-new{width:220px;flex:none}
 .col-new .col-add{width:100%;border:1px dashed var(--line);justify-content:center;height:42px}
 .col-line{width:3px;border-radius:2px;background:var(--accent);align-self:stretch;flex:none;margin:0 -8px}
 .ghost.col{max-height:60vh;overflow:hidden}
 .col-h{cursor:grab}
+.col-add:active{background:var(--hover)}
 @media (hover:hover){
+  .col-add:hover{background:var(--hover);color:var(--fg)}
   .card:hover{box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 16%,transparent)}
 }
 @media (max-width:640px){

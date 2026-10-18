@@ -3,7 +3,6 @@
 .cal-h{display:flex;align-items:center;gap:6px;padding-bottom:10px;flex-wrap:wrap}
 .cal-h h2{font-size:18px;font-weight:600;letter-spacing:-.015em;margin:0 8px 0 2px;min-width:150px}
 .pillbtn{height:30px;padding:0 10px;border-radius:7px;border:1px solid var(--line);color:var(--fg);display:flex;align-items:center;gap:6px;white-space:nowrap}
-.pillbtn:hover{background:var(--hover)}
 .pillbtn .n{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .seg{display:flex;border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
 .seg button{height:26px;padding:0 10px;border-radius:6px;color:var(--muted);font-size:12.5px;font-weight:500;white-space:nowrap}
@@ -19,7 +18,6 @@
 .day.today .num{background:var(--danger);color:#fff;font-weight:600}
 .day.sel{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--accent) 55%,transparent)}
 .day-add{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--muted);opacity:0;margin-right:auto}
-.day:hover .day-add{opacity:1}
 .day-items{display:flex;flex-direction:column;gap:4px;min-width:0}
 .ev{border-radius:6px;padding:5px 7px 6px;background:color-mix(in srgb,var(--tbg) 62%,var(--surface));cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 6%,transparent)}
 .ev.c-none{background:var(--surface)}
@@ -52,7 +50,6 @@
 .adl.c-none{background:var(--muted)}
 .adl.done{opacity:.4}
 .more-ev{color:var(--muted);font-size:11.5px;font-weight:500;text-align:left;padding:1px 6px;border-radius:5px}
-.more-ev:hover{background:var(--hover);color:var(--fg)}
 /* phone week: timed entries are plain colored blocks, the day view shows the details */
 .tg.lines .tev{padding:0;border-left:3px solid var(--tfg);border-radius:3px;background:color-mix(in srgb,var(--tfg) 28%,transparent);box-shadow:none}
 .tg.lines .tev.c-none{--tfg:var(--muted)}
@@ -60,7 +57,7 @@
 .tg.lines .tev.done{opacity:.5}
 .tg.lines .tg-allc{gap:2px;padding:3px 2px}
 .gut{font-size:10.5px;color:var(--faint);text-align:right;padding-right:6px;font-variant-numeric:tabular-nums;font-family:var(--mono)}
-.tg-all .gut{align-self:center;font-family:var(--font)}
+.tg-all .gut{align-self:stretch;font-family:var(--font)}
 .tg-body .gut{position:relative}
 .tg-body .gut span{position:absolute;right:6px;transform:translateY(-50%)}
 .tg-col{position:relative;border-left:1px solid var(--line);height:calc(var(--hh) * 24);background-image:repeating-linear-gradient(to bottom,var(--line) 0 1px,transparent 1px var(--hh));cursor:cell;min-width:0}
@@ -76,7 +73,11 @@
 .slot-hint{position:absolute;left:2px;right:2px;border-radius:6px;border:1.5px dashed var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);pointer-events:none;font-family:var(--mono);font-size:11px;color:var(--accent);padding:2px 5px;z-index:4}
 .agenda .list{border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px var(--line);--row-bg:var(--surface)}
 .grid,.tg{touch-action:pan-y}
+.pillbtn:active{background:var(--hover)}
 @media (hover:hover){
+  .pillbtn:hover{background:var(--hover)}
+  .day:hover .day-add{opacity:1}
+  .more-ev:hover{background:var(--hover);color:var(--fg)}
   .ev:hover{box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 16%,transparent)}
 }
 @media (max-width:640px){
@@ -89,7 +90,12 @@
   .grid .ev.c-none{background:var(--muted)}
   .grid .ev > *{display:none}
   .more-ev{padding:0;font-size:0;width:6px;height:6px;border-radius:3px;background:var(--faint);pointer-events:none}
-  .cal-h h2{min-width:0;font-size:20px;flex:1}
+  .cal-h{gap:4px}
+  .cal-h h2{min-width:0;font-size:19px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 2px 0 0}
+  .cal-h .ibtn{width:34px}
+  .cal-h .spacer{display:none}
+  .cal-h .pillbtn{height:34px}
+  .pillbtn .lbl{display:none}
   .cal-h .seg{order:6;width:100%}
   .cal-h .seg button{flex:1;height:32px;font-size:14px}
   .agenda{display:block;padding-top:16px}

@@ -55,7 +55,6 @@ body.is-sorting,body.is-sorting *{user-select:none!important;-webkit-user-select
 [data-key]{-webkit-touch-callout:none}
 .swl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px}
 .sw{display:flex;align-items:center;gap:8px;height:36px;padding:0 8px;border-radius:7px;font-size:13px;min-width:0}
-.sw:hover{background:var(--hover)}
 .sw i{width:20px;height:20px;border-radius:6px;background:var(--tbg);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--fg) 12%,transparent);flex:none}
 .sw.on{box-shadow:inset 0 0 0 2px var(--accent)}
 .cust input[type="color"]{width:44px;height:28px;border:0;border-radius:7px;padding:0;background:none;cursor:pointer}
@@ -75,7 +74,9 @@ body.is-sorting,body.is-sorting *{user-select:none!important;-webkit-user-select
 .qd{display:flex;gap:6px;flex-wrap:wrap;padding-block:6px}
 .qd button{height:30px;padding:0 12px;border-radius:15px;background:var(--seg-bg);font-size:13px;color:var(--fg)}
 .lst{--row-bg:var(--surface)}
+.sw:active{background:var(--hover)}
 @media (hover:hover){
+  .sw:hover{background:var(--hover)}
   button.cell:hover,.cell[role="button"]:hover,label.cell:hover,a.cell:hover{background:var(--hover)}
 }
 @media (max-width:640px){

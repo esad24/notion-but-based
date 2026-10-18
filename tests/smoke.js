@@ -103,7 +103,9 @@ const check = (name, ok, detail = '') => { if (!ok) failed++; console.log(`${ok 
   check('pull down closes the sheet', await p.isHidden('#menu'));
   // list view
   await tap('[data-act="addview"]'); await tap('#menu [data-l="list"]'); await p.waitForTimeout(400);
-  check('list view rows', (await p.locator('.lv .sw-row').count()) === 4);
+  check('new list view hides completed pages', (await p.locator('.lv .sw-row').count()) === 3);
+  await tap('[data-act="settings"]'); await tap('#menu [data-tg="showDone"]'); await p.click('#menu [data-m="close"]'); await p.waitForTimeout(400);
+  check('show completed on lists every page', (await p.locator('.lv .sw-row').count()) === 4);
   await shot('list');
   const firstId = await p.getAttribute('.lv .sw-row', 'data-id');
   await swipe('.lv .sw-row', 140, 0);

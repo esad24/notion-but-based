@@ -21,7 +21,6 @@ svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke
 .sync[data-s="error"]::before{background:var(--danger)}
 .tools{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto}
 .ibtn{display:grid;place-items:center;width:36px;height:36px;border-radius:9px;color:var(--muted);position:relative;flex:none}
-.ibtn:hover{background:var(--hover);color:var(--fg)}
 .ibtn.on{color:var(--accent)}
 .ibtn.on::after{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .newbtn{display:flex;align-items:center;gap:4px;height:32px;padding:0 12px 0 10px;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-weight:500;white-space:nowrap;margin-left:6px}
@@ -50,6 +49,10 @@ svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke
 /* vertical and horizontal scrolling live on separate nested scrollers, so every swipe moves along one axis only */
 .hx{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}
 .bbar{display:none}
+.ibtn:active{background:var(--hover)}
+@media (hover:hover){
+  .ibtn:hover{background:var(--hover);color:var(--fg)}
+}
 @media (max-width:640px){
   body{font-size:15px}
   .top{padding-top:10px}
