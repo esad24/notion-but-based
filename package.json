@@ -1,0 +1,9 @@
+{
+  "name": "tagwerk",
+  "private": true,
+  "description": "Tagwerk: single-file task and calendar app, built from src/ into dist/tagwerk.html",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node tests/smoke.js"
+  }
+}

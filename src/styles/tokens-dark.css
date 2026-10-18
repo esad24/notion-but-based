@@ -1,0 +1,10 @@
+/* Dark color tokens (declarations only). tokens.css includes this twice: for the system dark preference and for data-theme="dark" */
+  --bg:#191919; --surface:#222222; --surface-2:#262626; --hover:rgba(255,255,255,.06); --line:#2f2f2f;
+  --fg:#e7e6e3; --muted:#9b9a96; --faint:#6c6b68; --accent:#2383e2; --accent-fg:#ffffff; --danger:#eb5d57;
+  --shadow:0 12px 36px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.09); --scrim:rgba(0,0,0,.55);
+  --gray-bg:#3b3b3b; --gray-fg:#d6d5d2; --brown-bg:#4b3a2e; --brown-fg:#e6cbb4; --orange-bg:#5e3a1c; --orange-fg:#f6bb8a;
+  --yellow-bg:#55491d; --yellow-fg:#f1d888; --green-bg:#24432f; --green-fg:#9fdbb1; --blue-bg:#1e3a5d; --blue-fg:#9cc6f6;
+  --purple-bg:#3f305b; --purple-fg:#cbb4f3; --pink-bg:#572a41; --pink-fg:#f3aaca; --red-bg:#5c2727; --red-fg:#f6a5a3;
+  --teal-bg:#1f4542; --teal-fg:#8fdcd2; --cyan-bg:#1c4150; --cyan-fg:#93d6ee; --indigo-bg:#2e3160; --indigo-fg:#b4b8f5; --lime-bg:#3a4520; --lime-fg:#c6e48e; --fuchsia-bg:#522a55; --fuchsia-fg:#eeaaf0; --slate-bg:#343a42; --slate-fg:#c5ccd6;
+  --grouped:#1c1c1e; --cell:#2c2c2e; --sep:rgba(84,84,88,.6); --seg-bg:rgba(118,118,128,.24); --seg-bg-strong:rgba(120,120,128,.36); --green-sw:#30d158;
+  color-scheme:dark;

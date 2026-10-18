@@ -1,0 +1,33 @@
+/* Board view: columns per group option, cards */
+.board{display:flex;gap:12px;align-items:flex-start;padding-block:14px 140px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));width:max-content;min-height:100%}
+.col{width:272px;flex:none;border-radius:10px;padding:8px;background:color-mix(in srgb,var(--tbg) 24%,var(--bg));display:flex;flex-direction:column;gap:6px}
+.col.c-none{background:var(--surface-2)}
+.col-h{display:flex;align-items:center;gap:6px;padding:2px 2px 4px;min-height:30px}
+.col-h .tag{font-weight:500;font-size:13px}
+.col-h .count{color:var(--muted);font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.col-h .ibtn{width:28px;height:28px}
+.col-body{display:flex;flex-direction:column;gap:6px;min-height:8px}
+.card{position:relative;border-radius:8px;padding:9px 10px 10px;background:color-mix(in srgb,var(--tbg) 52%,var(--surface));box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 7%,transparent);cursor:pointer;display:flex;gap:8px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;contain:layout paint}
+.card.c-none{background:var(--surface)}
+.card .chk{margin-top:1px}
+.card-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:6px}
+.t-title{font-weight:500;line-height:1.35;overflow-wrap:anywhere}
+.cprops{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12.5px}
+.cp{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:0}
+.cp.full{flex-basis:100%;color:var(--muted)}
+.cp.full .dt{color:var(--muted)}
+.cp.full .dt.overdue{color:var(--danger)}
+.col-add{display:flex;align-items:center;gap:6px;color:var(--muted);height:32px;padding:0 6px;border-radius:6px;text-align:left}
+.col-add:hover{background:var(--hover);color:var(--fg)}
+.col-new{width:220px;flex:none}
+.col-new .col-add{width:100%;border:1px dashed var(--line);justify-content:center;height:42px}
+.col-line{width:3px;border-radius:2px;background:var(--accent);align-self:stretch;flex:none;margin:0 -8px}
+.ghost.col{max-height:60vh;overflow:hidden}
+.col-h{cursor:grab}
+@media (hover:hover){
+  .card:hover{box-shadow:0 0 0 1px color-mix(in srgb,var(--fg) 16%,transparent)}
+}
+@media (max-width:640px){
+  .col{width:min(82vw,300px)}
+  .card{padding:11px 12px 12px}
+}

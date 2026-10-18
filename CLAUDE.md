@@ -1,15 +1,14 @@
 # Tagwerk: project guide for Claude
 
-Tagwerk is the owner's personal task and calendar database: a Notion-style app with Table, Board, Calendar and List views, custom properties, option colors and conditional row colors, built as **one HTML file** and published as a Claude Artifact. It is used mostly on an **iPhone 17**.
+Tagwerk is the owner's personal task and calendar database: a Notion-style app with Table, Board, Calendar and List views, custom properties, option colors and conditional row colors. It ships as **one HTML file** published as a Claude Artifact and is used mostly on an **iPhone 17**.
 
 Before changing UI or behavior, load the general skill in `.claude/skills/web-app-craft/` (`SKILL.md`, then `references/pitfalls.md`). This file covers only what is specific to this project.
 
 ## Quick facts
-- Source: `src/tagwerk.html` (about 2,450 lines: CSS, HTML shell, one IIFE of vanilla JS, no libraries, no build step).
+- Source: small files in `src/` (vanilla JS + CSS, no libraries). `node build.js` stitches them into **`dist/tagwerk.html`**, the file that gets published. `dist/` is git-ignored; never edit it.
 - Runtime: a Claude Artifact with capability `db` (shared document store). Live artifact: https://claude.ai/artifact/EXotYFsGPMVa3n1SxZcW58 (private to the owner).
 - Local fallback: `localStorage` key `tagwerk:v2` (opens instantly, works without the database), last view in `tagwerk:vid`.
-- Tests: `node tests/smoke.js` (headless Chromium: iPhone-size touch context and desktop; screenshots in `tests/out/`, which is git-ignored). Needs Playwright (`npm i playwright` or the preinstalled one at `/opt/node-tools/node_modules/playwright`).
-- Syntax check: extract the `<script>` body and run `node --check` (see "Commands").
+- Tests: `node tests/smoke.js` builds, then drives the app in headless Chromium (iPhone-size touch context and desktop). Prints `ok`/`FAIL` per check, exits 1 on failure, screenshots in `tests/out/`. Needs Playwright (`npm i playwright` or the preinstalled one at `/opt/node-tools/node_modules/playwright`).
 
 ## Product rules (from the owner)
 - Content views keep the Notion look; **settings and menus follow Apple iOS patterns** (grouped lists, sheets, switches, segmented controls).
@@ -19,78 +18,103 @@ Before changing UI or behavior, load the general skill in `.claude/skills/web-ap
 - Gestures: pull a sheet down to close (or hide the keyboard), swipe right to go back, swipe list rows (right = complete, left = delete + Undo), swipe the calendar, press-and-hold + slide to reorder cards, board columns and settings lists.
 - Data labels are German (status: Nicht begonnen / In Arbeit / Erledigt; priority: Sehr hoch / Hoch / Mittel-hoch / Mittel / Niedrig). All app UI text is English.
 
-## Architecture
+## Commands
+```bash
+node build.js        # src/ -> dist/tagwerk.html; fails on a JS syntax error (prints the line) or a src file not included anywhere
+node tests/smoke.js  # build + phone/desktop checks; look at the screenshots in tests/out/ after UI changes
+```
+`npm run build` and `npm test` do the same.
 
-### File layout (`src/tagwerk.html`)
-Top to bottom, searchable by these comment markers:
-1. `<title>`, viewport meta, fonts link.
-2. `<style>`: color tokens (`:root`, dark block twice), `#app`/header, `#view` scrollers, tags, `/* table */`, `/* board */`, `/* calendar */`, `/* page sheet */`, `/* menus: ... */` (grouped lists, switches, segmented controls, phone sheet rules in `@media (max-width:640px)`), `/* list view */` (swipe rows).
-3. `<style id="colcss">` (generated column widths) and `<style id="cuscss">` (generated custom colors).
-4. HTML shell: `.top` header (title row, `#searchbar`, `#vtabs`, `#chipbar`), `<main id="view">`, `#bbar` bottom bar, `#sheet` page sheet, `#mscrim`/`#menu`, `#toast`.
-5. `<script>`, in order: helpers and icons, constants (`TYPES`, `COLORS`, `GROUPS`, `LAYOUTS`), `// ---------- defaults`, `state`, `dates`, `values`, `conditions`, `sorting`, `view helpers`, `persistence`, `mutations`, `schema mutations`, `rendering` (table, board, list, calendar), `page sheet`, `iOS-style gestures`, `menus`, `building blocks for menus and settings`, `editors`, `property menus`, `rule editors`, `view settings`, `toast`, `clicks`, `search`, `keyboard`, `column resize`, `drag & drop`, `boot`.
+## How the build works
+- `src/tagwerk.html` is the entry: `<head>` bits, one `<style>` with include lines, the HTML shell, and one `<script>` with an IIFE whose body is include lines.
+- An include line is a whole line holding only a comment: `/* @include styles/x.css */` or `// @include js/x.js` (paths relative to `src/`). Nothing else is transformed.
+- **Order matters.** CSS files are included in cascade order (later files win ties). JS files share one scope and run top to bottom: functions are hoisted, but `const`/`let` used by top-level code (event listener setup, `boot.js`) must come from an earlier file.
+- To add a file: create it with a one-line header comment, add its include line in the right place in `src/tagwerk.html`. The build refuses orphan files.
 
-### Data model
+## Where things live
+Every file starts with a one-line comment describing it (`head -1 src/js/*.js src/styles/*.css`).
+
+### `src/js/` (load order)
+| File | What it holds |
+|---|---|
+| `util.js` | `$`, `h()` HTML escape, `narrow()` phone layout, `svg`, `clone`, `stable`, `cap`, `newId` |
+| `icons.js` | `IC` UI icons, `TI` property type icons |
+| `constants.js` | `TYPES`, `HAS_OPTS`, `GROUPABLE`, `IS_DATEISH`, `COLORS`, `GROUPS`, `FORMATS`, `LAYOUTS`, `DEF_W` |
+| `defaults.js` | `defaultSchema()`, `defaultViews()` |
+| `state.js` | `S`, `P(id)`, `V()`, `opt`, `statusProp`, `isGroupProp`, `firstPropId`, `groupOpt` |
+| `dates.js` | date keys, `toMin/fromMin`, `relDate`, `dateLabel`, `endDay/sameDay/lastDay`, `durOf`, `weekStart` |
+| `settings.js` | `ST()`, `setST()`, `applyST()`, `fmtT()`, `WS()` |
+| `values.js` | `getV`, `isEmpty`, `fmtNum`, `safeUrl`, `tagO`, `isDone`, `disp` |
+| `conditions.js` | `OPS`, `opsFor`, `ruleReady`, `test`, `rowColor`, `condLabel` |
+| `sorting.js` | `sk`, `comparator` |
+| `view-helpers.js` | `viewProps`, `shownProps`, `visible` |
+| `persistence.js` | cache, `persist`, `queueWrite`, `saveSchema/saveViews`, sync indicator, `migrateTask`, `connect` |
+| `mutations.js` | `update`, `setVal`, `restore`, `createTask`, `removeTask`, `toggleDone` |
+| `schema.js` | `addOption`, `changeType`, `addProp`, `deleteProp`, `duplicateProp`, `deleteOption`, `customCss` |
+| `render.js` | `render`, `renderNow`, `renderBar`, `emptyState`, `groupTasks` |
+| `render-table.js` / `render-board.js` / `render-list.js` / `render-calendar.js` | one view each (`rowHtml` lives in list, `evHtml`/time grid in calendar) |
+| `sheet.js` | page sheet: `openSheet`, `closeSheet`, `renderSheet` |
+| `gestures.js` | `sheetGestures`, row swipes, keyboard hiding, calendar swipes |
+| `menu.js` | menu stack `MN`, `openMenu/pushMenu/popMenu/closeMenu/dismissMenu/drawMenu/placeMenu`, `sortable` |
+| `ui-blocks.js` | grouped-list builders (`grp`, `linkCell`, `actCell`, `tglCell`, `segCell`, `selCell`, `fldCell`), `bindControls` |
+| `editors.js` | `openEditor`, `textPage`, `pickerPage`, `optionPage`, `colorGrid`, `datePage` |
+| `prop-menus.js` | `propPage`, `typePage`, `newPropPage` |
+| `rule-editors.js` | `filtersPage`, `sortsPage`, `colorsPage` |
+| `settings-pages.js` | `settingsPage`, `generalPage`, `viewsPage`, `allPropsPage`, `propsVisPage`, `groupsPage`, `addViewPage`, `addGroupPage`, `trayPage`, `setLayout` |
+| `toast.js` | `toast(msg, undo)` |
+| `input.js` | delegated click handler (`data-act` values), search, keyboard shortcuts, `swallowClick` |
+| `drag.js` | column resize, drag & drop |
+| `boot.js` | startup |
+
+### `src/styles/` (cascade order)
+`tokens.css` (+ `tokens-dark.css`, included twice) · `base.css` (shell, header, bottom bar) · `values.css` (tags, dates, checkboxes, empty states) · `table.css` · `board.css` · `calendar.css` · `sheet.css` · `menus.css` · `list.css` · `toast.css` · `drag.css` · `motion.css`. Each file keeps its own `@media (hover:hover)` and `@media (max-width:640px)` (phone) rules at its end.
+
+### Common changes
+- **New view setting**: store it on the view object, add a control in `settingsPage` (`settings-pages.js`) with a `ui-blocks.js` builder + `bindControls`, read it in the view's `render-*.js`.
+- **New app setting**: add a default in `ST()` (`settings.js`), a control in `generalPage`, use it where needed.
+- **New property type**: `TYPES`/`DEF_W` (`constants.js`), icon in `TI`, then `disp` (`values.js`), `opsFor`/`test` (`conditions.js`), `sk` (`sorting.js`), `convertVal` (`schema.js`), `openEditor` (`editors.js`).
+- **New button action**: give the element `data-act="name"` and handle it in the click handler in `input.js` (clicks inside `#menu` are handled by the menu page itself).
+- **New settings page**: an object `{title, wide?, tall?, render(container)}`; open with `openMenu(anchor, page)` or `pushMenu(page)`.
+
+## Data model
 Collections in the artifact database:
 - `tasks/<id>`: `{title, body, created, updated, order, p:{<propId>: value}}`. Value types: select/status = option id; multi_select = `[ids]`; checkbox = `true`; number; text/url/email/phone = string; **date = `{d:'YYYY-MM-DD', t:'HH:MM', ed:'YYYY-MM-DD', e:'HH:MM'}`** (only `d` required; legacy values lack `ed`, then `e` belongs to day `d`; helpers `endDay`, `sameDay`, `lastDay`). Empty values are removed from `p`. Seed ids are `t01`..`t19`; new ids come from `newId()`.
 - `meta/schema`: `{props:[{id,name,type,options?:[{id,name,color,group?}],fmt?}], colorRules:[{id,prop,op,val,color}], settings:{title,theme,time24,weekStart}}`. `title` is a built-in property. Default property ids: `title, priority, date, status, category, created, updated`; option ids for priority `sh,h,mh,m,n`, for status `nb,ia,er`; category option ids are slugs (`business, job, looks, ...`). Users can add more properties (ids `p<random>`).
-- `meta/views`: `{views:[{id,name,type:'table'|'board'|'calendar'|'list', cols, hidden, filters:[{prop,op,val}], sorts:[{prop,dir}], widths, groupBy, hiddenGroups, hideEmpty, showNone, showCheck, dateProp, scope, wrap, density}]}`. Default ids: `board, table, cal, list`.
+- `meta/views`: `{views:[{id,name,type:'table'|'board'|'calendar'|'list', cols, hidden, filters:[{prop,op,val}], sorts:[{prop,dir}], widths, groupBy, hiddenGroups, hideEmpty, showNone, showCheck, dateProp, scope, wrap, density}]}`. Default ids: `board, table, cal`; views added later get `newId()` ids.
 - Legacy: tasks written by earlier versions have flat fields (`status`, `priority`, `category`, `date`, `time`, `end`, `notes`); `migrateTask()` converts them on read. `meta/options` is a dead leftover.
 - Colors: names in `COLORS` or custom `h-rrggbb`; CSS `.c-<name>` sets `--tbg/--tfg`; custom ones are generated into `#cuscss` by `customCss()` using `color-mix`.
 
+## Runtime behavior
 ### State and rendering
-- Global `S = {tasks:Map, schema, views, vid, q, openId, drafts:Set, month, sel}`. `P(id)` property lookup, `V()` current view, `visible(view)` filters (search, view filters) and sorts.
-- `render()` schedules one `requestAnimationFrame`; `renderNow()` rebuilds the current view via `innerHTML` (`renderTable`, `renderBoard`, `renderList`, `renderCalendar`), restores `scrollLeft` of `.hx` and `scrollTop` of `.vy`, and re-renders the open page sheet. Drag in progress defers rendering.
+- Global `S = {tasks:Map, schema, views, vid, q, openId, drafts:Set, month, sel}`. `visible(view)` applies search and view filters, then sorts.
+- `render()` schedules one `requestAnimationFrame`; `renderNow()` rebuilds the current view via `innerHTML`, restores `scrollLeft` of `.hx` and `scrollTop` of `.vy`, and re-renders the open page sheet. A drag in progress defers rendering.
 - Drafts: a new page lives in `S.drafts` until its title is non-empty and is not persisted or cached while a draft.
 
 ### Scrolling structure (do not change casually)
 - `#view` scrolls vertically for calendar, list and board. The board has an inner `.hx` (horizontal).
 - Table: `#view.v-table{overflow:hidden}` contains `.hx.tbx` (the **only** horizontal scroller, containing header and rows) containing `.tbl` (flex column) with `.tb-hw` (header) and `.vy` (rows, vertical scroll only). Widths come from `colCss()` into `#colcss` and apply to `.tr` and `.tb-h` explicitly (rows use `content-visibility:auto`).
 
-### Persistence and sync (`persistence` section)
+### Persistence and sync
 - `connect()` obtains `db` and subscribes to `tasks`, `meta/schema`, `meta/views`. Snapshots that only echo local writes are ignored by comparing `stable()` JSON; tasks with pending writes (`timers`, `busy`) or drafts are kept.
 - Writes: `persist(id, delay)` debounces then `queueWrite(key, fn)` chains per key; `saveSchema()`/`saveViews()` debounce 350 ms; deletes via `persistDelete`. `cacheLocal()` writes the `localStorage` copy 400 ms after changes.
 - Sync indicator (`#sync`, hidden text on phone): `saving`, `ok`, `local`, `error`.
 
-### Properties, values, rules
-- `getV(task, prop)` reads values (title, created, updated are special). `disp(prop, task)` returns the display HTML per type. `changeType()` converts stored values. `addProp/deleteProp/duplicateProp/addOption/deleteOption` keep schema, views and tasks consistent.
-- Rules engine: `opsFor(type)`, `ruleReady(rule)`, `test(rule, task)`, `rowColor(task)` (first ready matching `colorRules`). Filters use the same `test`. An unfinished rule (blank value) does nothing; `closeMenu()` drops unfinished filters.
+### Rules, views, menus
+- Rules engine: an unfinished rule (blank value) does nothing; `closeMenu()` drops unfinished filters. Filters and color rules share `test`; `rowColor` takes the first ready matching rule.
+- Board: drag cards between columns (`data-drop="grp:<id>"`), hold a column header to reorder. List: rows are `.sw-row` (swipeable). Calendar: scopes month, week, 3day, day; multi-day dates are placed on every covered day; time grid has drag to move (15 min snap) and a bottom handle to resize.
+- `#menu` is a popover on desktop and a bottom sheet on phones; `MN.tall` makes it near full height while typing; `--kb` from `visualViewport` keeps content above the keyboard.
+- Drag and drop: mouse starts after 5 px, touch after a 360 ms hold; drop kinds `grp`, `date`, `slot`, `allday`.
 
-### Views
-- **Table**: `shownProps(view)` columns, sort by header menu, resize handle `[data-rs]`, tinted rows by `rowColor`, `wrap` and `density` settings.
-- **Board**: groups from `groupBy` options (`groupTasks`), cards show shown properties, drag cards between columns (`data-drop="grp:<id>"`), hold a column header to reorder (`colDrag`).
-- **List**: Reminders style sections (optional grouping), rows are `.sw-row` (swipeable).
-- **Calendar**: scopes month, week, 3day, day (`SCOPES`, `calRange`, `navCal`, `setScope`). Month grid on phone shows dots and an agenda list; week/3day/day use `renderTimeGrid` with overlap lanes (`layoutLanes`), now-line, drag to move (15 min snap), bottom handle to resize. Multi-day dates are placed on every covered day.
-- Settings pages are objects `{title, wide?, tall?, render(container)}` shown by the menu stack: `settingsPage`, `generalPage`, `viewsPage`, `allPropsPage`, `propsVisPage`, `groupsPage`, `filtersPage`, `sortsPage`, `colorsPage`, `propPage`, `optionPage`, `datePage`, `pickerPage`, `textPage`, `addViewPage`, `trayPage`.
-
-### Menus, sheets, gestures
-- `openMenu/pushMenu/popMenu/closeMenu/dismissMenu/drawMenu/placeMenu`: one `#menu` element; popover on desktop, bottom sheet on phones; `MN.tall` makes it near full height while typing; `--kb` from `visualViewport` keeps content above the keyboard.
-- `sheetGestures(panel, {scroller,onClose,back})` handles pull-down and back-swipe for both `#sheet` and `#menu`. Row swipes (`.sw-row`), calendar swipes and keyboard-hiding swipes are document-level touch listeners right after it.
-- `sortable(list, onDone)` for grip reordering. Drag and drop (cards, rows, calendar entries, column headers) is in `// drag & drop`: mouse starts after 5 px, touch after a 360 ms hold, ghost clone, auto-scroll, drop kinds `grp`, `date`, `slot`, `allday`.
-
-### Settings stored with the schema
-`schema.settings`: `title` (header text), `theme` (system/light/dark, applied to `data-theme`), `time24`, `weekStart` (0 Sun, 1 Mon, 6 Sat). Helpers `ST()`, `setST()`, `applyST()`, `fmtT()`, `WS()`.
-
-## Commands
-```bash
-# syntax check of the embedded script
-python3 - <<'PY'
-import re,sys
-s=open('src/tagwerk.html').read()
-open('/tmp/tagwerk-check.js','w').write(s.split('<script>')[1].rsplit('</script>',1)[0])
-PY
-node --check /tmp/tagwerk-check.js
-
-# phone + desktop smoke test (screenshots in tests/out/, look at them)
-node tests/smoke.js
-```
-Publishing (inside a Claude Code session with the Artifact tool): publish `src/tagwerk.html` to the existing artifact URL (`url` parameter) so the link stays the same; `capabilities` are carried forward (`db`). For small changes use the tool's `edits` (the old text must occur exactly once). Always read the live artifact first if it may have changed. Verify data with `ArtifactData` (`list` collection `tasks`, `get` `meta/schema`, `meta/views`). The user edits data and views while you work: re-read before any migration and pin writes with `if_version`.
+## Publishing
+Inside a Claude Code session with the Artifact tool: run `node build.js`, then publish **`dist/tagwerk.html`** to the existing artifact URL (`url` parameter) so the link stays the same; `capabilities` are carried forward (`db`). Always republish the whole built file (the `edits` shortcut would change only `dist/`, which the next build overwrites). Read the live artifact first if it may have changed. Verify data with `ArtifactData` (`list` collection `tasks`, `get` `meta/schema`, `meta/views`). The user edits data and views while you work: re-read before any migration and pin writes with `if_version`.
 
 ## Conventions
-- Single file, vanilla JS, no dependencies. Keep sections in the existing order and marker style.
+- Vanilla JS, no dependencies, no transforms beyond includes. Put code in the file that owns the topic; keep files focused (split one that passes about 250 lines).
 - Match surrounding style: compact one-line handlers, `const`/arrow helpers, short comments only for non-obvious reasons.
 - Escape user text with `h()` in every HTML string. Wrap `localStorage` in try/catch.
 - New settings must be stored in `schema.settings` or the view object, exposed in the settings pages, and survive a reload.
-- Each UI change: check phone (402x874) and desktop, light and dark, then run `node tests/smoke.js`.
+- CSS: put a rule in the file of the component it styles, phone overrides in that file's `@media (max-width:640px)` block. Watch cascade order across files: a later file's rule of equal specificity wins over an earlier phone override.
+- Each UI change: check phone (402x874) and desktop, light and dark, then run `node tests/smoke.js` and look at the screenshots. Add a `check(...)` to the smoke test for new behavior.
 - Do not put model identifiers in commits, code comments or files.
 
 ## Known limits and ideas
@@ -98,3 +122,4 @@ Publishing (inside a Claude Code session with the Artifact tool): publish `src/t
 - Whole `tasks` collection is subscribed and mirrored in `localStorage` (about 5 MB limit); platform guidance is hundreds to low thousands of documents, hard cap 25,000.
 - Not implemented: formulas, relations, rollups, "any of" filter groups, dragging table rows to reorder, forms, recurring tasks, reminders/notifications.
 - Not verified on a real device: finger feel of gestures, iOS keyboard inside the Claude app, Safari-only rendering. Tests run in Chromium.
+- On phones the table text and the sheet's Done button use the desktop font sizes (14 px and 15 px): the larger phone sizes were overridden in the original file and were removed in the split to keep the look unchanged.
